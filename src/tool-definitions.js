@@ -1,5 +1,5 @@
 import {
-  ITEM_KINDS, READING_FIELDS, VERDICTS, compactCandidate, compactItem, compactShelf, createAssessment, createReading,
+  ITEM_KINDS, READING_FIELDS, SHELF_LIMIT, VERDICTS, compactCandidate, compactItem, compactShelf, createAssessment, createReading,
   createReadingRequest, createShelfItem, sanitizeText, sweepQueryFor, throwIfAborted
 } from "./engine.js";
 import { lookupLiveBarcode, searchLiveProducts } from "./live-catalog.js";
@@ -7,16 +7,24 @@ import { RECALL_SCOPES, searchRecalls } from "./live-recalls.js";
 
 const BUDGET = 1500;
 const CACHE_MS = 300000;
+const NOTICE = "Shortened to the WebMCP output budget; omitted counts are listed. Call get_shelf (with itemId) or get_recall_details for the rest.";
 
+// Always returns valid JSON: top-level arrays are shortened step by step, never the serialized string.
 function output(payload) {
-  const text = JSON.stringify(payload);
-  if (text.length <= BUDGET) return text;
-  const trimmed = { ...payload };
-  if (Array.isArray(trimmed.results)) trimmed.results = trimmed.results.slice(0, 2);
-  if (Array.isArray(trimmed.swept)) trimmed.swept = trimmed.swept.slice(0, 6);
-  if (Array.isArray(trimmed.items)) trimmed.items = trimmed.items.slice(0, 6);
-  trimmed.notice = "Output shortened to the WebMCP character budget; call get_shelf or get_recall_details for more.";
-  return JSON.stringify(trimmed).slice(0, BUDGET);
+  const full = JSON.stringify(payload);
+  if (full.length <= BUDGET) return full;
+  for (const keep of [8, 6, 4, 3, 2, 1]) {
+    const trimmed = { ...payload, notice: NOTICE, omitted: {} };
+    for (const [key, value] of Object.entries(payload)) {
+      if (Array.isArray(value) && value.length > keep) {
+        trimmed[key] = value.slice(0, keep);
+        trimmed.omitted[key] = value.length - keep;
+      }
+    }
+    const text = JSON.stringify(trimmed);
+    if (text.length <= BUDGET) return text;
+  }
+  return JSON.stringify({ notice: NOTICE, keys: Object.keys(payload), itemId: payload.itemId ?? payload.attachedTo ?? null });
 }
 
 function assertInput(input, allowed, required = []) {
@@ -193,7 +201,7 @@ export function createToolDefinitions({ store, onReadingRequested = () => {}, wa
       description: "Search live FDA and CPSC recall sources for every unresolved shelf item (or the given itemIds) using each item's brand or name, attach candidates to the cards, and flag items whose barcode digits appear in a notice.",
       inputSchema: {
         type: "object",
-        properties: { itemIds: { type: "array", maxItems: 8, uniqueItems: true, items: { type: "string", maxLength: 40 }, description: "Optional subset of shelf item ids; default is every unresolved item." } },
+        properties: { itemIds: { type: "array", maxItems: SHELF_LIMIT, uniqueItems: true, items: { type: "string", maxLength: 40 }, description: "Optional subset of shelf item ids; default is every unresolved item." } },
         additionalProperties: false
       },
       annotations: { readOnlyHint: false, untrustedContentHint: true },
@@ -207,7 +215,7 @@ export function createToolDefinitions({ store, onReadingRequested = () => {}, wa
           items = input.itemIds.map(itemOrThrow);
         }
         if (!items.length) throw new Error("The shelf has no unresolved items. Add items with add_shelf_item first.");
-        items = items.slice(0, 8);
+        items = items.slice(0, SHELF_LIMIT);
         store.dispatch({ type: "SWEEP_STARTED", message: `Sweeping ${items.length} item(s) across live recall sources…` });
         const swept = [];
         const errors = [];
@@ -218,17 +226,17 @@ export function createToolDefinitions({ store, onReadingRequested = () => {}, wa
             const search = await cachedRecallSearch(query, item.kind, options.signal);
             store.dispatch({ type: "ATTACH_CANDIDATES", itemId: item.id, search, actor });
             const fresh = store.getState().shelf.find((entry) => entry.id === item.id);
-            swept.push({ itemId: item.id, name: item.name.slice(0, 40), query, found: search.results.length, upcMatch: fresh.candidates.some((candidate) => candidate.upcMatch), top: search.results[0] ? `${search.results[0].firm.slice(0, 30)}: ${search.results[0].reason.slice(0, 60)}` : null });
+            swept.push({ itemId: item.id, name: item.name.slice(0, 28), query, found: search.results.length, upcMatch: fresh.candidates.some((candidate) => candidate.upcMatch), top: search.results[0] ? `${search.results[0].firm.slice(0, 24)}: ${search.results[0].reason.slice(0, 48)}` : null });
           } catch (error) {
             if (options.signal?.aborted) throw error;
             errors.push({ itemId: item.id, message: (error instanceof Error ? error.message : String(error)).slice(0, 120) });
           }
           if (index < items.length - 1) await wait(250);
         }
-        const message = `${swept.length} item(s) swept, ${swept.filter((entry) => entry.found).length} with candidates${errors.length ? `, ${errors.length} source error(s)` : ""}.`;
+        const message = `${swept.length} of ${items.length} item(s) swept, ${swept.filter((entry) => entry.found).length} with candidates${errors.length ? `, ${errors.length} source error(s)` : ""}.`;
         store.dispatch({ type: "SWEEP_FINISHED", message, failed: swept.length === 0, actor });
         if (!swept.length) throw new Error(`Sweep failed: ${errors.map((entry) => entry.message).join(" | ")}`);
-        return output({ live: true, swept, errors, next: "For items with candidates, call get_recall_details, then request_package_reading with exact where-to-look instructions. Refine with search_recalls if the brand term was too broad or narrow.", uiEffect: "Each item card shows its candidates and status." });
+        return output({ live: true, requested: items.length, swept, errors, withCandidates: swept.filter((entry) => entry.found).map((entry) => entry.itemId), next: "For items with candidates, call get_recall_details, then request_package_reading with exact where-to-look instructions. Refine with search_recalls if the brand term was too broad or narrow.", uiEffect: "Each item card shows its candidates and status." });
       }
     },
     {
@@ -329,12 +337,17 @@ export function createToolDefinitions({ store, onReadingRequested = () => {}, wa
     {
       name: "get_shelf",
       title: "Read the shared shelf",
-      description: "Read a compact snapshot of every shelf item: status, candidate ids, barcode matches, pending readings the person still owes, recorded readings, assessments, and the person's resolutions.",
-      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      description: "Read the shared shelf. Without itemId: one short row per item with status, candidate and barcode-match counts, readings the person still owes, verdicts, and resolutions. With itemId: that item's candidate ids, readings, latest where-to-look, and assessment.",
+      inputSchema: {
+        type: "object",
+        properties: { itemId: { type: "string", maxLength: 40, description: "Optional shelf item id for a detailed view of one item." } },
+        additionalProperties: false
+      },
       annotations: { readOnlyHint: true, untrustedContentHint: true },
       async execute(input = {}, options = {}) {
         throwIfAborted(options.signal);
-        assertInput(input, []);
+        assertInput(input, ["itemId"]);
+        if (input.itemId != null) return output({ item: compactItem(itemOrThrow(input.itemId)) });
         return output(compactShelf(store.getState()));
       }
     }

@@ -67,7 +67,9 @@ try {
   if (!sweep.swept[0]?.upcMatch) throw new Error("Sweep did not flag the barcode match.");
   await page.waitForSelector(".candidate-upc");
   const shelf = await run("get_shelf");
-  const recallId = shelf.items[0].candidateIds[0];
+  if (shelf.items[0]?.upc !== 1) throw new Error("Shelf summary row did not report the barcode match.");
+  const detail = await run("get_shelf", { itemId: added.item.id });
+  const recallId = detail.item.candidateIds[0];
   const details = await run("get_recall_details", { recallId });
   if (!/1274425/.test(details.code)) throw new Error("Recall details missing lot text.");
   await run("request_package_reading", { itemId: added.item.id, fields: ["lot_code"], whereToLook: "Lot code printed beneath the best-by date on the lid; the recall covers 1274425 through 2140425.", recallId });
@@ -90,7 +92,7 @@ try {
   await card.locator(".decide-discard").click();
   await card.locator(".resolved").waitFor();
   const final = await run("get_shelf");
-  if (final.items[0].resolution !== "discard" || final.unresolved !== 0) throw new Error("Human decision did not become agent-readable.");
+  if (final.items[0].resolved !== "discard" || final.unresolved !== 0) throw new Error("Human decision did not become agent-readable.");
   if (errors.length) throw new Error(`Page errors: ${errors.join(" | ")}`);
 
   await mkdir(resolve(root, "reports"), { recursive: true });

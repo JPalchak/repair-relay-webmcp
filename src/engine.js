@@ -4,6 +4,7 @@ export const ITEM_KINDS = Object.freeze(["food", "drug", "consumer"]);
 export const READING_FIELDS = Object.freeze(["lot_code", "best_by", "upc", "model_number", "other"]);
 export const VERDICTS = Object.freeze(["likely_affected", "likely_not_affected", "no_recall_found", "cannot_determine"]);
 export const RESOLUTIONS = Object.freeze(["keep", "discard", "return", "contact_firm"]);
+export const SHELF_LIMIT = 12;
 
 export function sanitizeText(value, max = 280) {
   return String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
@@ -139,13 +140,20 @@ export function createResolution(input, authorization) {
   return { action: input.action, note: sanitizeText(optionalString(input.note, "note"), 160), by: "human", at: new Date().toISOString() };
 }
 
+// An assessment is only as current as the evidence it saw. New candidates or readings mark it stale until the agent reassesses.
+export function staleAssessment(assessment, reason) {
+  if (!assessment || assessment.stale) return assessment;
+  return { ...assessment, stale: true, staleReason: reason, staleAt: new Date().toISOString() };
+}
+
 export function itemStatus(item) {
   if (item.resolution) return { key: `resolved_${item.resolution.action}`, label: `Resolved: ${item.resolution.action.replace("_", " ")}`, tone: item.resolution.action === "keep" ? "good" : "warn" };
-  if (item.assessment) {
+  if (item.assessment && !item.assessment.stale) {
     const tones = { likely_affected: "bad", likely_not_affected: "good", no_recall_found: "good", cannot_determine: "warn" };
     return { key: item.assessment.verdict, label: `Agent assessment: ${item.assessment.verdict.replaceAll("_", " ")}`, tone: tones[item.assessment.verdict] };
   }
   if (pendingReadingFields(item).length) return { key: "reading_requested", label: "Your reading is needed", tone: "warn" };
+  if (item.assessment?.stale) return { key: "assessment_stale", label: "Assessment outdated by new evidence", tone: "warn" };
   if (item.candidates.some((candidate) => candidate.upcMatch)) return { key: "upc_match", label: "Barcode appears in a recall notice", tone: "bad" };
   if (item.candidates.length) return { key: "candidates", label: `${item.candidates.length} recall candidate${item.candidates.length === 1 ? "" : "s"}`, tone: "warn" };
   if (item.lastSweep) return { key: "clear_sweep", label: "No candidates in the last sweep", tone: "good" };
@@ -168,6 +176,7 @@ export function compactCandidate(candidate, size = "list") {
 }
 
 export function compactItem(item) {
+  const latestAsk = item.readingRequests.at(-1);
   return {
     id: item.id,
     name: item.name.slice(0, 60),
@@ -178,19 +187,33 @@ export function compactItem(item) {
     candidates: item.candidates.length,
     candidateIds: item.candidates.slice(0, 6).map((candidate) => candidate.id),
     upcMatches: item.candidates.filter((candidate) => candidate.upcMatch).length,
+    lastQuery: item.lastSweep?.query ?? null,
     pendingReading: pendingReadingFields(item),
-    readings: item.readings.map((reading) => `${reading.field}=${reading.value}`).slice(0, 6),
-    assessment: item.assessment?.verdict ?? null,
+    whereToLook: latestAsk ? latestAsk.whereToLook.slice(0, 120) : null,
+    readings: item.readings.map((reading) => `${reading.field}=${reading.value}${reading.source === "human" ? "" : " (relayed)"}`).slice(0, 6),
+    assessment: item.assessment ? { verdict: item.assessment.verdict, stale: item.assessment.stale === true, reasoning: item.assessment.reasoning.slice(0, 160) } : null,
     resolution: item.resolution?.action ?? null
   };
 }
 
+// One short row per item keeps a full twelve-item shelf inside the output budget; get_shelf with itemId returns compactItem.
+export function shelfRow(item) {
+  const row = { id: item.id, name: item.name.slice(0, 32), status: itemStatus(item).key, cand: item.candidates.length };
+  const upc = item.candidates.filter((candidate) => candidate.upcMatch).length;
+  if (upc) row.upc = upc;
+  const owed = pendingReadingFields(item);
+  if (owed.length) row.owed = owed;
+  if (item.assessment) row.verdict = item.assessment.stale ? `${item.assessment.verdict} (stale)` : item.assessment.verdict;
+  if (item.resolution) row.resolved = item.resolution.action;
+  return row;
+}
+
 export function compactShelf(state) {
   return {
-    items: state.shelf.map(compactItem),
+    items: state.shelf.map(shelfRow),
     unresolved: state.shelf.filter((item) => !item.resolution).length,
     awaitingPerson: state.shelf.filter((item) => pendingReadingFields(item).length).map((item) => item.id),
     lastSweep: state.sweep.at,
-    note: "Resolutions (keep, discard, return, contact_firm) are recorded only by the person in the visible interface."
+    note: "Pass itemId for candidate ids and readings. Resolutions are recorded only by the person in the visible interface."
   };
 }

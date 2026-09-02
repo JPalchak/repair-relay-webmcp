@@ -98,6 +98,26 @@ test("sweep_shelf checks every unresolved item with a source-appropriate scope",
   assert.ok(JSON.stringify(result).length <= 1500);
 });
 
+test("sweep_shelf covers every item the shelf can hold and never truncates JSON", async () => {
+  const ctx = setup();
+  for (let index = 0; index < 12; index += 1) {
+    await ctx.call("add_shelf_item", { description: `Organic long-named pantry staple number ${index} in a large family-size package`, brand: `Brand ${index}`, kind: "food" });
+  }
+  const raw = await ctx.call("sweep_shelf");
+  assert.ok(raw.length <= 1500);
+  const result = JSON.parse(raw);
+  assert.equal(result.requested, 12);
+  assert.equal(result.swept.length + (result.omitted?.swept ?? 0), 12);
+  assert.ok(ctx.store.getState().shelf.every((item) => item.lastSweep));
+  const shelfRaw = await ctx.call("get_shelf");
+  assert.ok(shelfRaw.length <= 1500);
+  const shelf = JSON.parse(shelfRaw);
+  assert.equal(shelf.items.length + (shelf.omitted?.items ?? 0), 12);
+  const detail = JSON.parse(await ctx.call("get_shelf", { itemId: shelf.items[0].id }));
+  assert.equal(detail.item.id, shelf.items[0].id);
+  assert.ok(Array.isArray(detail.item.candidateIds));
+});
+
 test("get_recall_details returns the full code text for a known candidate only", async () => {
   const ctx = setup();
   const itemId = await shelfWithItem(ctx);
@@ -126,8 +146,9 @@ test("the reading loop: request, relayed and human readings, gated assessment, h
   assert.equal(ctx.store.getState().shelf[0].resolution, null);
   ctx.store.dispatch({ type: "RESOLVE_ITEM", itemId, action: "discard", authorization: { actor: "human", confirmed: true } });
   const shelf = JSON.parse(await ctx.call("get_shelf"));
-  assert.equal(shelf.items[0].resolution, "discard");
+  assert.equal(shelf.items[0].resolved, "discard");
   assert.equal(shelf.unresolved, 0);
+  assert.equal(JSON.parse(await ctx.call("get_shelf", { itemId })).item.resolution, "discard");
   await assert.rejects(ctx.call("sweep_shelf"), /no unresolved items/);
 });
 

@@ -1,4 +1,4 @@
-import { attachCandidates, createResolution } from "./engine.js";
+import { SHELF_LIMIT, attachCandidates, createResolution, staleAssessment } from "./engine.js";
 
 export function createInitialState() {
   return {
@@ -41,7 +41,7 @@ export function reducer(state, event) {
     case "CATALOG_FAILED":
       return withLog({ ...state, catalog: { ...state.catalog, status: "error", error: event.message } }, event.actor, "Catalog search failed", event.message);
     case "ADD_ITEM": {
-      if (state.shelf.length >= 12) throw new Error("The shelf holds at most 12 items per session. Resolve or remove one first.");
+      if (state.shelf.length >= SHELF_LIMIT) throw new Error(`The shelf holds at most ${SHELF_LIMIT} items per session. Resolve or remove one first.`);
       return withLog({ ...state, shelf: [...state.shelf, event.item], highlightItemId: event.item.id }, event.actor, "Item added to shelf", `${event.item.name} (${event.item.kind}).`);
     }
     case "REMOVE_ITEM": {
@@ -50,10 +50,16 @@ export function reducer(state, event) {
       return withLog({ ...state, shelf: state.shelf.filter((entry) => entry.id !== event.itemId) }, "human", "Item removed", item.name);
     }
     case "ATTACH_CANDIDATES": {
-      const next = updateItem(state, event.itemId, (item) => attachCandidates(item, event.search));
+      let added = 0;
+      const next = updateItem(state, event.itemId, (item) => {
+        const attached = attachCandidates(item, event.search);
+        added = attached.candidates.length - item.candidates.length;
+        return added > 0 ? { ...attached, assessment: staleAssessment(attached.assessment, "New recall candidates were attached after this assessment.") } : attached;
+      });
       const item = next.shelf.find((entry) => entry.id === event.itemId);
       const upc = item.candidates.filter((candidate) => candidate.upcMatch).length;
-      return withLog({ ...next, recallMeta: mergeMeta(state, event.search) }, event.actor, "Recall sources searched", `“${event.search.query}” → ${event.search.results.length} candidate(s) for ${item.name}${upc ? `; ${upc} contain this barcode` : ""}.`);
+      const stale = added > 0 && item.assessment?.stale ? "; the earlier assessment is now outdated" : "";
+      return withLog({ ...next, recallMeta: mergeMeta(state, event.search) }, event.actor, "Recall sources searched", `“${event.search.query}” → ${event.search.results.length} candidate(s) for ${item.name}${upc ? `; ${upc} contain this barcode` : ""}${stale}.`);
     }
     case "RECALL_SEARCHED":
       return withLog({ ...state, recallMeta: mergeMeta(state, event.search) }, event.actor, "Recall sources searched", `“${event.search.query}” → ${event.search.results.length} candidate(s), not attached to an item.`);
@@ -66,7 +72,11 @@ export function reducer(state, event) {
       return withLog({ ...next, highlightItemId: event.itemId }, event.actor, "Package reading requested", `${event.request.fields.join(", ")} — ${event.request.whereToLook}`);
     }
     case "ADD_READING": {
-      const next = updateItem(state, event.itemId, (item) => ({ ...item, readings: [...item.readings, event.reading].slice(-12) }));
+      const next = updateItem(state, event.itemId, (item) => ({
+        ...item,
+        readings: [...item.readings, event.reading].slice(-12),
+        assessment: staleAssessment(item.assessment, "A new package reading was recorded after this assessment.")
+      }));
       return withLog(next, event.reading.source === "human" ? "human" : "agent", "Package reading recorded", `${event.reading.field}: ${event.reading.value}${event.reading.source === "agent_relayed" ? " (relayed by agent)" : ""}`);
     }
     case "SET_ASSESSMENT": {

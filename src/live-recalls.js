@@ -29,11 +29,19 @@ export function barcodeVariants(barcode) {
   return [...variants].filter((item) => item.length >= 11);
 }
 
+// Digit runs keep numeric boundaries: separators are collapsed only between adjacent digits, so
+// "Model 123456" and "lot 789012" stay two numbers instead of one artificial twelve-digit code.
+const DIGIT_RUN = /\d(?:[ .-]?\d)+/g;
+
+export function digitRuns(text) {
+  return (String(text ?? "").match(DIGIT_RUN) ?? []).map(digitsOnly).filter((run) => run.length >= 11);
+}
+
 export function upcMatches(barcode, ...texts) {
   const variants = barcodeVariants(barcode);
   if (!variants.length) return false;
-  const haystack = digitsOnly(texts.join(" "));
-  return variants.some((variant) => haystack.includes(variant));
+  const runs = texts.flatMap((text) => digitRuns(text));
+  return runs.some((run) => variants.some((variant) => run.includes(variant)));
 }
 
 function fdaDate(value) {

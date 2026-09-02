@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { barcodeVariants, normalizeCpscRecall, normalizeFdaRecall, searchRecalls, sourcesForScope, upcMatches } from "../src/live-recalls.js";
+import { barcodeVariants, digitRuns, normalizeCpscRecall, normalizeFdaRecall, searchRecalls, sourcesForScope, upcMatches } from "../src/live-recalls.js";
 import { cpscPayload, fdaPayload, fetchStub } from "./fixtures.js";
 
 test("barcode variants cover EAN-13, UPC-A, and UPC-A without check digit", () => {
@@ -13,6 +13,14 @@ test("UPC matching ignores spaces and punctuation inside notices", () => {
   assert.equal(upcMatches("0051500241219", fdaPayload.results[0].product_description), true);
   assert.equal(upcMatches("0051500241219", "no numbers here"), false);
   assert.equal(upcMatches("", "UPC 0 51500 24121 9"), false);
+});
+
+test("UPC matching never joins digits across separate fields or words", () => {
+  assert.equal(upcMatches("123456789012", "Model 123456", "lot 789012"), false);
+  assert.equal(upcMatches("123456789012", "Model 123456 lot 789012"), false);
+  assert.equal(upcMatches("123456789012", "Model 123456, lot 789012, 16 oz"), false);
+  assert.equal(upcMatches("123456789012", "UPC 1 23456 78901 2"), true);
+  assert.deepEqual(digitRuns("2.55 oz twin pack UPC 8 88109 01002 7; lot 5167832"), ["888109010027"]);
 });
 
 test("FDA normalization keeps lot text, dates, and a source record link", () => {

@@ -111,8 +111,9 @@ export function createRenderer({ store, tools, actions }) {
   function renderDecision(item) {
     const wrap = el("section", "decision-block");
     if (item.assessment) {
-      const box = el("div", `assessment tone-${itemStatus(item).tone}`);
-      box.append(el("strong", "", `Agent assessment: ${friendly(item.assessment.verdict)}`), el("p", "", item.assessment.reasoning));
+      const box = el("div", `assessment tone-${item.assessment.stale ? "warn" : itemStatus(item).tone}`);
+      box.append(el("strong", "", `Agent assessment: ${friendly(item.assessment.verdict)}${item.assessment.stale ? " (outdated)" : ""}`), el("p", "", item.assessment.reasoning));
+      if (item.assessment.stale) box.append(el("p", "small", `${item.assessment.staleReason} Ask your agent to reassess before deciding.`));
       if (item.assessment.recallId) box.append(el("p", "small muted", `Against ${item.assessment.recallId} · considered ${item.assessment.readingsConsidered.length} reading(s)`));
       wrap.append(box);
     }

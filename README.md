@@ -25,7 +25,8 @@ WebMCP is the right primitive because the collaboration happens *on the page*. T
 - **The person never reads a recall database.** They see, per item, a status pill, the candidate notices with the full code text in a monospace block, and a highlighted card that says exactly what to read and where.
 - **The agent never guesses at a physical object.** `assess_item` rejects `likely_affected` / `likely_not_affected` until a package reading exists. It can ask (`request_package_reading`), wait, and relay what the person says (`record_package_reading`), but it cannot invent a lot code.
 - **Provenance is visible.** Every card shows the query used, the sources checked, each source’s status, and the fetch time. Failures are shown as failures. There is no fixture fallback.
-- **Barcode digits are matched deterministically.** If an item came from the live catalog, its EAN-13 / UPC-A digits are compared against the notice text (notices print UPCs with spaces, so the comparison is digits-only) and the card is flagged in red before any reasoning happens.
+- **Barcode digits are matched deterministically.** If an item came from the live catalog, its EAN-13 / UPC-A digits are compared against contiguous digit runs in the notice text (notices print UPCs with spaces, so separators are collapsed between adjacent digits but never across words) and the card is flagged in red before any reasoning happens.
+- **Assessments cannot outlive their evidence.** If a later search attaches new candidates or a new reading is recorded, the existing assessment is marked outdated on the card and in `get_shelf` until the agent reassesses.
 
 ## What people and agents can do together that was difficult before
 
