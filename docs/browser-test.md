@@ -30,4 +30,4 @@ npm run test:live
 npm run test:browser
 ```
 
-The automated test launches Chromium with WebMCP feature flags and captures tool registration. It does not misrepresent this as a manual inspection of `chrome://flags`.
+The automated browser test launches Chromium with WebMCP feature flags, captures tool registration, and uses a controlled Open Food Facts-shaped response so UI lifecycle failures are deterministic. `npm run test:live` independently proves the production API path. It does not misrepresent the automated harness as a manual inspection of `chrome://flags`.

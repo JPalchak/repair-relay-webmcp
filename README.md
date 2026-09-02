@@ -87,7 +87,7 @@ npm run test:browser   # Chromium DOM + WebMCP lifecycle + live data journey
 npm run build
 ```
 
-Unit tests inject an API-shaped response to deterministically test edge cases. `test:live` separately proves the production API is reachable and returns normalized real records. The browser journey proves eight tools register, live provenance reaches the DOM, physical checks gate approval, a trusted click approves, and the agent can then read the approved choice.
+Unit and browser tests inject an API-shaped response to deterministically test edge cases and the complete WebMCP/DOM lifecycle. `test:live` separately proves the production API is reachable and returns normalized real records. The browser journey proves eight tools register, provenance reaches the DOM, physical checks gate approval, a trusted click approves, and the agent can then read the approved choice.
 
 ## Evaluation-driven development
 

@@ -1,6 +1,6 @@
 # Tested browser-agent behavior
 
-The release harness launches Chromium with `--enable-features=WebMCP,WebMCPTesting`, injects only a minimal `document.modelContext` capture layer, and uses the app's real tool definitions, callbacks, DOM, external API, and trusted user clicks.
+The release harness launches Chromium with `--enable-features=WebMCP,WebMCPTesting`, injects a minimal `document.modelContext` capture layer and a controlled API-shaped response, then uses the app's real tool definitions, callbacks, DOM, and trusted user clicks. A separate `npm run test:live` job probes the real production API.
 
 Verified:
 

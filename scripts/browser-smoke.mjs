@@ -15,6 +15,11 @@ try {
   const browser = await chromium.launch({ headless:true, args:["--enable-features=WebMCP,WebMCPTesting"] });
   const page = await browser.newPage({ viewport:{width:1440,height:1000} });
   const errors=[]; page.on("pageerror",(error)=>errors.push(error.message));
+  // Browser lifecycle stays deterministic; npm run test:live separately probes production data.
+  await page.route("https://world.openfoodfacts.org/**",async(route)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({count:2,products:[
+    {code:"3168930003632",product_name:"Quaker Oats",brands:"Quaker",quantity:"800 g",ingredients_text:"100% oatmeal",allergens_tags:["en:gluten"],nutriscore_grade:"a",last_modified_t:1780104331,nutriments:{sugars_100g:1.1}},
+    {code:"5000108478119",product_name:"Quaker White Oats",brands:"Quaker",quantity:"1 kg",ingredients_text:"100% oat flakes",allergens_tags:[],nutriscore_grade:"a",last_modified_t:1787248315,nutriments:{sugars_100g:1.1}}
+  ]})}));
   await page.addInitScript(()=>{
     const registered=new Map();
     Object.defineProperty(Document.prototype,"modelContext",{configurable:true,get(){return{async registerTool(tool){if(registered.has(tool.name))throw new DOMException("Duplicate tool","InvalidStateError");registered.set(tool.name,tool)},async getTools(){return[...registered.values()]}}}});
@@ -30,7 +35,7 @@ try {
 
   await page.waitForSelector("#product-list .product-card",{timeout:30000});
   const liveState=await page.evaluate(()=>window.__labelRelay.getState().search);
-  if(!liveState?.live||liveState.source!=="Open Food Facts"||!liveState.fetchedAt)throw new Error("Browser did not receive provenance-rich live data.");
+  if(!liveState?.live||liveState.source!=="Open Food Facts"||!liveState.fetchedAt)throw new Error("Browser did not receive provenance-rich API-shaped data.");
   const ids=liveState.results.slice(0,2).map((product)=>product.id);
   await page.evaluate(async(productIds)=>window.__registeredWebMCPTools.get("compare_products").execute({productIds},{}),ids);
   await page.evaluate(async(productId)=>window.__registeredWebMCPTools.get("stage_verified_choice").execute({productId,rationale:"Most complete live record; physical verification remains required."},{}),ids[0]);
