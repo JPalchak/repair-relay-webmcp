@@ -12,7 +12,8 @@
 - Human-only approval boundary
 - Automated unit, contract, scenario, repository, and browser tests
 - Recurring Luna in-app review
-- Recurring Luna GitHub Actions review and improvement thread
+- Recurring Luna GitHub Actions review with run summaries and artifacts
+- Recurring conversational Luna review returning improvements to the main thread
 - Devpost description and custom-answer draft
 - Narrated demo video artifact and timed script
 

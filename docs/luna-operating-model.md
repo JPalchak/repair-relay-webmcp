@@ -19,7 +19,11 @@ The workflow:
 1. runs the static and semantic Luna checks;
 2. fails on blockers;
 3. uploads the Markdown and JSON reports;
-4. creates or updates one GitHub issue titled `[Luna] Repair Relay recurring review` so the main development thread receives the latest suggestions rather than accumulating duplicate issues.
+4. publishes the latest recommendations to the GitHub Actions run summary without requiring Issues to be enabled.
+
+## In the main conversation
+
+An enabled ChatGPT automation runs a separate Luna review every 12 hours against the public repository and live deployment. It reports evidence-backed blockers and prioritized improvements back to the project conversation. This conversational reviewer is intentionally read-only; repository changes remain deliberate actions in the main thread.
 
 ## Review invariants
 
