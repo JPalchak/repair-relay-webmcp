@@ -4,7 +4,12 @@ import { searchRecalls } from "../src/live-recalls.js";
 
 const report = { passed: true, probes: [] };
 
-async function attempt(name, run, validate, retries = 2) {
+const RATE_LIMITED = /rate-limited|rate limit/i;
+
+// Shared CI runner IPs regularly exhaust Open Food Facts' 10-searches-per-minute limit. A documented
+// upstream rate limit on that one endpoint is reported but tolerated when `tolerateRateLimit` is set;
+// every other failure, and every other source, still fails the probe.
+async function attempt(name, run, validate, { retries = 2, tolerateRateLimit = false } = {}) {
   let lastError;
   for (let index = 0; index <= retries; index += 1) {
     try {
@@ -14,17 +19,23 @@ async function attempt(name, run, validate, retries = 2) {
       return;
     } catch (error) {
       lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 1500 * (index + 1)));
+      const backoff = RATE_LIMITED.test(error?.message ?? "") ? 6000 * (index + 1) : 1500 * (index + 1);
+      if (index < retries) await new Promise((resolve) => setTimeout(resolve, backoff));
     }
   }
+  const message = lastError?.message ?? String(lastError);
+  if (tolerateRateLimit && RATE_LIMITED.test(message)) {
+    report.probes.push({ name, passed: true, tolerated: "upstream rate limit from a shared CI address", error: message });
+    return;
+  }
   report.passed = false;
-  report.probes.push({ name, passed: false, error: lastError?.message ?? String(lastError) });
+  report.probes.push({ name, passed: false, error: message });
 }
 
 await attempt("Open Food Facts text search", () => searchLiveProducts("peanut butter"), (result) => {
   if (!result.live || !result.results.length) throw new Error("No live catalog records.");
   return { fetchedAt: result.fetchedAt, totalReported: result.total, sample: result.results.slice(0, 2).map((p) => ({ code: p.code, name: p.name, brand: p.brand })) };
-});
+}, { tolerateRateLimit: true });
 
 await attempt("Open Food Facts barcode lookup", () => lookupLiveBarcode("3168930003632"), (result) => {
   if (!result.results.length) throw new Error("Barcode record missing.");
