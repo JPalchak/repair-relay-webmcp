@@ -1,49 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
 
-const root = fileURLToPath(new URL("../", import.meta.url));
-const read = (path) => readFile(new URL(path, new URL("../", import.meta.url)), "utf8");
-
-test("imperative WebMCP registration is present", async () => {
-  const source = await read("src/webmcp.js");
-  assert.match(source, /document\.modelContext\.registerTool\(\{/);
-  assert.match(source, /name:\s*["']search_products["']/);
-  assert.match(source, /description:\s*["']Search the product catalog["']/);
-  assert.match(source, /\{ signal: controller\.signal \}/);
+const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+test("imperative WebMCP registration contains the exact required literal", async () => {
+  const source = await read("src/webmcp.js"); assert.match(source, /document\.modelContext\.registerTool\(\{/); assert.match(source, /name:\s*["']search_products["']/); assert.match(source, /description:\s*["']Search the product catalog["']/);
 });
-
-test("required catalog tool literals are present in source", async () => {
-  const source = await read("src/tool-definitions.js");
-  assert.match(source, /name:\s*["']search_products["']/);
-  assert.match(source, /description:\s*["']Search the product catalog["']/);
+test("live catalog calls Open Food Facts and has no fixture catalog", async () => {
+  const source = await read("src/live-catalog.js"); assert.match(source, /world\.openfoodfacts\.org/); assert.match(source, /fetchedAt/); await assert.rejects(read("src/catalog.js"));
 });
-
-test("repository includes an identifiable MIT license", async () => {
-  const license = await read("LICENSE");
-  assert.ok(license.startsWith("MIT License"));
-  assert.match(license, /Jason Frankiewicz-Palchak/);
+test("Luna is absent from the product surface", async () => {
+  for (const path of ["index.html", "src/app.js", "src/render.js", "src/tool-definitions.js"]) assert.doesNotMatch(await read(path), /luna/i);
 });
-
-test("debug surface deliberately omits approval", async () => {
-  const source = await read("src/app.js");
-  const exposedBlock = source.slice(source.indexOf("window.__repairRelay"));
-  assert.match(exposedBlock, /invokeTool/);
-  assert.doesNotMatch(exposedBlock, /approvePlan|APPROVE_PLAN/);
+test("repository has an identifiable MIT license", async () => assert.match(await read("LICENSE"), /^MIT License/));
+test("debug surface omits approval authority", async () => {
+  const source = await read("src/app.js"); const block = source.slice(source.indexOf("window.__labelRelay")); assert.match(block, /invokeTool/); assert.doesNotMatch(block, /APPROVE_CHOICE|approveChoice/);
 });
-
-test("documentation contains judge instructions and authority rationale", async () => {
-  const readme = await read("README.md");
-  assert.match(readme, /chrome:\/\/flags\/#enable-webmcp-testing/);
-  assert.match(readme, /Human-only approval/);
-  assert.match(readme, /Luna recurring reviewer/);
-  assert.match(readme, /search_products/);
+test("documentation includes judge flag, live source, and human-only approval", async () => {
+  const readme = await read("README.md"); assert.match(readme, /chrome:\/\/flags\/#enable-webmcp-testing/); assert.match(readme, /Open Food Facts/); assert.match(readme, /human-only/i);
 });
-
-test("HTML uses an accessible named main workspace", async () => {
-  const html = await read("index.html");
-  assert.match(html, /<main id="workspace">/);
-  assert.match(html, /aria-live="polite"/);
-  assert.match(html, /Skip to workbench/);
+test("HTML has an accessible named main workspace and live regions", async () => {
+  const html = await read("index.html"); assert.match(html, /<main id="workspace">/); assert.match(html, /aria-live="polite"/); assert.match(html, /Skip to workspace/);
 });

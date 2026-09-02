@@ -1,15 +1,15 @@
-# WebMCP Challenge requirement mapping
+# Challenge requirement mapping
 
-| Requirement | Implementation |
+| Requirement | Evidence |
 |---|---|
-| WebMCP-powered web app | `src/webmcp.js` registers eight imperative tools |
-| Human-agent collaboration | Human evidence and human approval combine with agent search, comparison, and planning |
-| Working live URL | `LIVE_URL.txt` and README |
-| Text description | `DEVPOST.md` |
-| Public code | Branch source URL in `REPOSITORY_URL.txt` |
-| Necessary source/assets/instructions | Complete static app, tests, scripts, docs, and workflows |
-| Open-source license | `LICENSE` (MIT) |
-| Required catalog tool | `search_products` with exact description `Search the product catalog` |
-| Browser testing | `docs/browser-test.md` and `scripts/browser-smoke.mjs` |
-| Recurring evaluation | In-app 60-second Luna loop plus `.github/workflows/repair-relay-luna.yml` |
-| Demo video | Verified MP4 handoff plus `docs/demo-script.md` |
+| Working hosted project | Public ChatGPT Sites URL in README and `LIVE_URL.txt` |
+| Public repository | Dedicated GitHub repository in README and `REPOSITORY_URL.txt` |
+| Open-source license | Root `LICENSE`, MIT |
+| Exact required tool | Executable literal in `src/webmcp.js`; contract tests |
+| Real working data | `src/live-catalog.js`; visible provenance; `npm run test:live` |
+| Meaningful human-agent collaboration | Physical package checks + agent live comparison + human-only approval |
+| Chrome WebMCP iteration | `docs/browser-test.md`; Chromium lifecycle harness |
+| Security guidance | Untrusted hints, closed schemas, bounded output, safe image host, honest failure |
+| Evaluation | `npm run eval`; unit/browser/live tests; recurring Luna development-subagent reviews |
+| Luna not a web feature | Product-surface test rejects `luna`; no Luna UI, timer, or WebMCP tool |
+| Submission description | README and `DEVPOST.md` answer fit, UX, new collaboration, implementation |

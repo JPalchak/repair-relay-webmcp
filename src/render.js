@@ -1,266 +1,163 @@
-import { computeCaseConfidence } from "./engine.js";
+const dateTime = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 
-const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-const time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
-
-function element(tag, className, text) {
+function el(tag, className = "", text = "") {
   const node = document.createElement(tag);
   if (className) node.className = className;
-  if (text != null) node.textContent = text;
+  if (text !== "") node.textContent = text;
   return node;
 }
 
-function riskLabel(value) {
-  return `${value.slice(0, 1).toUpperCase()}${value.slice(1)} risk`;
+function friendly(value) {
+  return String(value).replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function freshness(iso) {
+  if (!iso) return "Date unknown";
+  const days = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));
+  return days === 0 ? "Updated today" : `Updated ${days}d ago`;
 }
 
 export function createRenderer({ store, tools, actions }) {
+  const q = (selector) => document.querySelector(selector);
   const els = {
-    webmcpStatus: document.querySelector("#webmcp-status"),
-    deviceModel: document.querySelector("#device-model"),
-    budget: document.querySelector("#budget"),
-    riskLimit: document.querySelector("#risk-limit"),
-    caseConfidence: document.querySelector("#case-confidence"),
-    evidenceCount: document.querySelector("#evidence-count"),
-    evidenceList: document.querySelector("#evidence-list"),
-    rankingState: document.querySelector("#ranking-state"),
-    recommendationEmpty: document.querySelector("#recommendation-empty"),
-    recommendationResults: document.querySelector("#recommendation-results"),
-    rankingExplanation: document.querySelector("#ranking-explanation"),
-    productList: document.querySelector("#product-list"),
-    comparisonPanel: document.querySelector("#comparison-panel"),
-    comparisonWrap: document.querySelector("#comparison-table-wrap"),
-    planStatus: document.querySelector("#plan-status"),
-    planEmpty: document.querySelector("#plan-empty"),
-    planCard: document.querySelector("#plan-card"),
-    planRisk: document.querySelector("#plan-risk"),
-    planVersion: document.querySelector("#plan-version"),
-    planTitle: document.querySelector("#plan-title"),
-    planSteps: document.querySelector("#plan-steps"),
-    planAssumptions: document.querySelector("#plan-assumptions"),
-    approvalCheckbox: document.querySelector("#approval-checkbox"),
-    approveButton: document.querySelector("#approve-button"),
-    approvalNote: document.querySelector("#approval-note"),
-    lunaSummary: document.querySelector("#luna-summary"),
-    lunaSuggestions: document.querySelector("#luna-suggestions"),
-    lunaTimestamp: document.querySelector("#luna-timestamp"),
-    activityLog: document.querySelector("#activity-log"),
-    toolList: document.querySelector("#tool-list"),
-    decisionDialog: document.querySelector("#decision-dialog"),
-    decisionReason: document.querySelector("#decision-reason"),
-    decisionSummary: document.querySelector("#decision-summary")
+    webmcpStatus: q("#webmcp-status"), searchStatus: q("#search-status"), sourceLine: q("#source-line"), error: q("#search-error"),
+    resultList: q("#product-list"), empty: q("#result-empty"), comparison: q("#comparison-panel"), comparisonWrap: q("#comparison-wrap"),
+    checks: q("#check-list"), checkCount: q("#check-count"), productSelect: q("#check-product"), choiceEmpty: q("#choice-empty"),
+    choiceCard: q("#choice-card"), choiceStatus: q("#choice-status"), choiceTitle: q("#choice-title"), choiceBrand: q("#choice-brand"),
+    choiceRationale: q("#choice-rationale"), requiredChecks: q("#required-checks"), consent: q("#approval-checkbox"), approve: q("#approve-button"),
+    approvalNote: q("#approval-note"), activity: q("#activity-log"), tools: q("#tool-list"), decision: q("#decision-dialog"),
+    decisionReason: q("#decision-reason"), decisionSummary: q("#decision-summary")
   };
 
   function renderStatus(status) {
-    els.webmcpStatus.textContent = "";
-    const dot = element("span", "status-dot");
-    dot.setAttribute("aria-hidden", "true");
-    els.webmcpStatus.append(dot, document.createTextNode(status.message));
-    els.webmcpStatus.className = `status-pill ${status.supported ? "status-ready" : "status-neutral"}`;
+    els.webmcpStatus.className = `status-pill ${status.supported ? "status-live" : "status-neutral"}`;
+    els.webmcpStatus.textContent = status.message;
   }
 
-  function renderEvidence(state) {
-    els.evidenceCount.textContent = String(state.evidence.length);
-    els.evidenceList.replaceChildren(
-      ...state.evidence.map((item) => {
-        const li = element("li", "evidence-item");
-        li.dataset.source = item.source;
-        const p = element("p", "", item.text);
-        const meta = element("div", "evidence-meta");
-        meta.append(
-          element("span", "evidence-tag", item.tag),
-          element("span", "", `${Math.round(item.confidence * 100)}% confidence`),
-          element("span", "", item.source === "agent" ? "recorded through agent" : "recorded by person")
-        );
-        li.append(p, meta);
-        return li;
-      })
-    );
+  function renderSearch(state) {
+    els.searchStatus.textContent = state.searchStatus === "loading" ? "Fetching live data…" : state.search ? `${state.search.results.length} live records` : "No search yet";
+    els.searchStatus.className = `status-pill ${state.searchStatus === "loading" ? "status-working" : state.search ? "status-live" : "status-neutral"}`;
+    els.error.hidden = !state.searchError;
+    els.error.textContent = state.searchError;
+    els.sourceLine.textContent = state.search
+      ? `Live from ${state.search.source} · fetched ${dateTime.format(new Date(state.search.fetchedAt))} · ${state.search.total.toLocaleString()} matching records reported`
+      : "Every result will show its source and fetch time. No fixture fallback exists.";
+    const results = state.search?.results ?? [];
+    els.empty.hidden = results.length > 0 || state.searchStatus === "loading";
+    els.resultList.replaceChildren(...results.map((product) => {
+      const card = el("li", "product-card");
+      const media = el("div", "product-media");
+      if (product.imageUrl) {
+        const image = el("img");
+        image.src = product.imageUrl;
+        image.alt = `${product.name} package from Open Food Facts`;
+        image.loading = "lazy";
+        image.referrerPolicy = "no-referrer";
+        media.append(image);
+      } else media.append(el("span", "image-missing", "No image"));
+      const body = el("div", "product-body");
+      const source = el("a", "source-link", "Open Food Facts ↗");
+      source.href = product.sourceUrl;
+      source.target = "_blank";
+      source.rel = "noopener noreferrer";
+      const heading = el("h3", "", product.name);
+      const brand = el("p", "product-brand", `${product.brand}${product.quantity ? ` · ${product.quantity}` : ""}`);
+      const facts = el("div", "fact-row");
+      facts.append(
+        el("span", `grade grade-${product.nutriScore}`, `Nutri-Score ${product.nutriScore.toUpperCase()}`),
+        el("span", "", `${product.completeness}% complete`),
+        el("span", "", freshness(product.lastModified)),
+        el("span", "", `Barcode ${product.code}`)
+      );
+      const allergen = el("p", "allergen-line", product.allergens.length ? `Recorded allergens: ${product.allergens.join(", ")}` : "Allergen data not recorded — verify the package.");
+      const ingredients = el("p", "ingredients", product.ingredients || "Ingredients not recorded — verify the package.");
+      const controls = el("div", "card-actions");
+      const compare = el("button", "button button-quiet", "Compare"); compare.type = "button"; compare.addEventListener("click", () => actions.toggleCompare(product.id));
+      const stage = el("button", "button button-primary", "Stage for verification"); stage.type = "button"; stage.addEventListener("click", () => actions.stageChoice(product.id));
+      controls.append(compare, stage, source);
+      body.append(heading, brand, facts, allergen, ingredients, controls);
+      card.append(media, body);
+      return card;
+    }));
+
+    const selected = els.productSelect.value;
+    els.productSelect.replaceChildren(el("option", "", "Choose a live result…"), ...results.map((product) => {
+      const option = el("option", "", `${product.name} · ${product.code}`); option.value = product.id; return option;
+    }));
+    if (results.some((p) => p.id === selected)) els.productSelect.value = selected;
   }
 
-  function renderProducts(state) {
-    const search = state.search;
-    const hasResults = Boolean(search?.results?.length);
-    els.recommendationEmpty.hidden = hasResults;
-    els.recommendationResults.hidden = !hasResults;
-
-    if (!hasResults) {
-      els.rankingState.textContent = "Awaiting search";
-      els.productList.replaceChildren();
-      return;
-    }
-
-    els.rankingState.textContent = `${search.results.length} ranked`;
-    els.rankingExplanation.textContent = search.explanation;
-    els.productList.replaceChildren(
-      ...search.results.map((item, index) => {
-        const li = element("li", `product-card${index === 0 ? " top" : ""}`);
-        const rank = element("span", "product-rank", String(index + 1));
-        const body = element("div");
-        const title = element("h3", "", item.name);
-        const description = element("p", "", item.description);
-        const facts = element("div", "product-facts");
-        facts.append(
-          element("span", "", money.format(item.price)),
-          element("span", "", `${item.confidence}% fit`),
-          element("span", "", item.compatibility.label),
-          element("span", "", riskLabel(item.repairRisk)),
-          element("span", "", `${item.leadDays} day lead`)
-        );
-        const breakdown = element("div", "score-breakdown");
-        for (const reason of item.reasons.filter((entry) => entry.points > 0).slice(0, 3)) {
-          breakdown.append(element("span", "", `+${reason.points} ${reason.label}`));
-        }
-        const actionsWrap = element("div", "product-actions");
-        const compare = element("button", "button button-quiet", "Compare");
-        compare.type = "button";
-        compare.addEventListener("click", () => actions.toggleCompare(item.id));
-        const stage = element("button", "button button-primary", "Stage plan");
-        stage.type = "button";
-        stage.addEventListener("click", () => actions.stagePlan(item.id));
-        actionsWrap.append(compare, stage);
-        body.append(title, description, facts, breakdown, actionsWrap);
-        li.append(rank, body);
-        return li;
-      })
-    );
+  function renderChecks(state) {
+    els.checkCount.textContent = String(state.checks.length);
+    els.checks.replaceChildren(...state.checks.slice().reverse().map((check) => {
+      const item = el("li", `check-item outcome-${check.outcome}`);
+      item.append(el("strong", "", `${friendly(check.checkType)} · ${friendly(check.outcome)}`), el("p", "", check.note), el("small", "", `${check.productId} · ${check.source === "agent" ? "recorded through agent" : "recorded by person"}`));
+      return item;
+    }));
   }
 
   function renderComparison(state) {
-    if (state.comparison.length < 2) {
-      els.comparisonPanel.hidden = true;
-      els.comparisonWrap.replaceChildren();
-      return;
-    }
-    els.comparisonPanel.hidden = false;
-    const table = element("table", "comparison-table");
-    const thead = element("thead");
-    const headRow = element("tr");
-    ["Candidate", "Price", "Fit", "Compatibility", "Risk", "Lead"].forEach((label) => {
-      headRow.append(element("th", "", label));
-    });
-    thead.append(headRow);
-    const tbody = element("tbody");
-    for (const item of state.comparison) {
-      const row = element("tr");
-      row.append(
-        element("td", "", item.name),
-        element("td", "", money.format(item.price)),
-        element("td", "", `${item.confidence}%`),
-        element("td", "", item.compatibility),
-        element("td", "", item.risk),
-        element("td", "", `${item.leadDays} days`)
-      );
+    els.comparison.hidden = state.comparison.length < 2;
+    if (state.comparison.length < 2) return els.comparisonWrap.replaceChildren();
+    const table = el("table", "comparison-table");
+    const head = el("tr");
+    ["Product", "Nutri-Score", "Sugar/100g", "Allergens", "Completeness", "Freshness"].forEach((label) => head.append(el("th", "", label)));
+    const thead = el("thead"); thead.append(head); const tbody = el("tbody");
+    state.comparison.forEach((product) => {
+      const row = el("tr");
+      [product.name, product.nutriScore.toUpperCase(), product.sugar100g == null ? "Not recorded" : `${product.sugar100g} g`, product.allergens.join(", ") || "Not recorded", `${product.completeness}%`, freshness(product.lastModified)].forEach((value) => row.append(el("td", "", value)));
       tbody.append(row);
-    }
-    table.append(thead, tbody);
-    els.comparisonWrap.replaceChildren(table);
+    });
+    table.append(thead, tbody); els.comparisonWrap.replaceChildren(table);
   }
 
-  function renderPlan(state) {
-    const plan = state.stagedPlan;
-    els.planEmpty.hidden = Boolean(plan);
-    els.planCard.hidden = !plan;
-
-    if (!plan) {
-      els.planStatus.textContent = "No draft";
-      els.planStatus.className = "status-pill status-neutral";
-      els.approvalCheckbox.checked = false;
-      els.approveButton.disabled = true;
+  function renderChoice(state) {
+    const choice = state.stagedChoice;
+    els.choiceEmpty.hidden = Boolean(choice);
+    els.choiceCard.hidden = !choice;
+    if (!choice) {
+      els.choiceStatus.textContent = "Nothing staged";
+      els.choiceStatus.className = "status-pill status-neutral";
       return;
     }
-
-    const approved = plan.status === "approved";
-    els.planStatus.textContent = approved ? "Human approved" : "Staged · unapproved";
-    els.planStatus.className = `status-pill ${approved ? "status-ready" : "status-warning"}`;
-    els.planRisk.textContent = riskLabel(plan.risk);
-    els.planVersion.textContent = `Draft ${plan.version}`;
-    els.planTitle.textContent = plan.title;
-    els.planSteps.replaceChildren(
-      ...plan.steps.map((step) => {
-        const li = element("li");
-        li.append(
-          element("strong", "", step.title),
-          document.createTextNode(` — ${step.detail}`),
-          element("span", "stop-condition", `Stop condition: ${step.stopCondition}`)
-        );
-        return li;
-      })
-    );
-    els.planAssumptions.replaceChildren(...plan.assumptions.map((assumption) => element("li", "", assumption)));
-
-    els.approvalCheckbox.disabled = approved;
-    els.approvalCheckbox.checked = approved;
-    els.approveButton.disabled = approved || !els.approvalCheckbox.checked;
-    els.approveButton.textContent = approved ? "Approved by the person" : "Approve as the person at the bench";
-    els.approvalNote.textContent = approved
-      ? `Approval recorded ${new Date(plan.approvedAt).toLocaleString()}.`
-      : "No agent tool has approval authority.";
-  }
-
-  function renderLuna(state) {
-    const review = state.luna;
-    if (!review) return;
-    els.lunaSummary.textContent = `${review.score}/${review.maxScore}. ${Object.values(review.dimensions).filter((score) => score === 5).length}/6 dimensions at full score.`;
-    els.lunaSuggestions.replaceChildren(
-      ...(review.suggestions.length
-        ? review.suggestions.map((suggestion) => element("li", "", suggestion))
-        : [element("li", "", "No blocking improvement found. Preserve the authority boundary.")])
-    );
-    els.lunaTimestamp.textContent = `Last run ${time.format(new Date(review.reviewedAt))} · reruns after changes and every 60 seconds`;
+    const approved = choice.status === "human_approved";
+    els.choiceStatus.textContent = approved ? "Human approved" : "Awaiting human verification";
+    els.choiceStatus.className = `status-pill ${approved ? "status-live" : "status-working"}`;
+    els.choiceTitle.textContent = choice.name;
+    els.choiceBrand.textContent = `${choice.brand} · barcode ${choice.productId}`;
+    els.choiceRationale.textContent = choice.rationale;
+    els.requiredChecks.replaceChildren(...(choice.requiredChecks.length
+      ? choice.requiredChecks.map((type) => el("li", "required", `${friendly(type)} still required`))
+      : [el("li", "complete", "Barcode and ingredients checks match the physical package.")]));
+    els.consent.disabled = approved || choice.requiredChecks.length > 0;
+    els.consent.checked = approved;
+    els.approve.disabled = approved || choice.requiredChecks.length > 0 || !els.consent.checked;
+    els.approve.textContent = approved ? "Approved by the person" : "Approve this verified choice";
+    els.approvalNote.textContent = approved ? `Approved ${dateTime.format(new Date(choice.approvedAt))}.` : "No WebMCP tool can approve. Product records may be incomplete; the package label remains authoritative.";
   }
 
   function renderActivity(state) {
-    els.activityLog.replaceChildren(
-      ...state.activity.slice(0, 8).map((item) => {
-        const li = element("li", "activity-item");
-        li.append(
-          element("strong", "", `${item.actor} · ${item.action}`),
-          element("span", "", item.detail),
-          element("time", "", time.format(new Date(item.at)))
-        );
-        return li;
-      })
-    );
+    els.activity.replaceChildren(...state.activity.slice(0, 8).map((item) => {
+      const li = el("li", "activity-item"); li.append(el("strong", "", `${item.actor} · ${item.action}`), el("span", "", item.detail), el("time", "", dateTime.format(new Date(item.at)))); return li;
+    }));
   }
 
   function renderTools() {
-    els.toolList.replaceChildren(
-      ...tools.map((tool) => {
-        const item = element("div", "tool-chip");
-        item.append(
-          element("code", "", tool.name),
-          element("small", "", tool.annotations?.readOnlyHint ? "Read-only" : "Updates visible state")
-        );
-        return item;
-      })
-    );
+    els.tools.replaceChildren(...tools.map((tool) => {
+      const item = el("div", "tool-chip"); item.append(el("code", "", tool.name), el("small", "", tool.annotations.readOnlyHint ? "Read-only" : "Updates shared state")); return item;
+    }));
   }
 
   function renderDecision(state) {
-    if (!state.decisionRequest || !state.stagedPlan) return;
+    if (!state.decisionRequest || !state.stagedChoice) return;
     els.decisionReason.textContent = state.decisionRequest.reason;
-    els.decisionSummary.textContent = `${state.stagedPlan.title}. ${state.stagedPlan.steps.length} visible steps; ${state.stagedPlan.risk} risk; still unapproved.`;
-    if (!els.decisionDialog.open) els.decisionDialog.showModal();
+    els.decisionSummary.textContent = `${state.stagedChoice.name}; ${state.stagedChoice.requiredChecks.length} physical check(s) remain; no approval recorded.`;
+    if (!els.decision.open) els.decision.showModal();
   }
 
   function render(state) {
-    els.deviceModel.textContent = `${state.device.model} · ${state.device.voltage} V`;
-    els.budget.textContent = money.format(state.constraints.budget);
-    els.riskLimit.textContent = state.constraints.maxRisk[0].toUpperCase() + state.constraints.maxRisk.slice(1);
-    els.caseConfidence.textContent = `${computeCaseConfidence(state)}%`;
-    renderEvidence(state);
-    renderProducts(state);
-    renderComparison(state);
-    renderPlan(state);
-    renderLuna(state);
-    renderActivity(state);
-    renderDecision(state);
+    renderSearch(state); renderChecks(state); renderComparison(state); renderChoice(state); renderActivity(state); renderDecision(state);
   }
-
-  renderTools();
-  render(store.getState());
-  store.subscribe(render);
-
-  return { renderStatus, render, elements: els };
+  renderTools(); render(store.getState()); store.subscribe(render);
+  return { renderStatus, render };
 }

@@ -1,4 +1,4 @@
-name: Repair Relay CI
+name: Label Relay CI
 
 on:
   push:
@@ -27,6 +27,17 @@ jobs:
       - run: npm run check
       - run: npm run verify:repo
 
+  live-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts
+      - run: npm run test:live
+
   browser:
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -42,6 +53,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: repair-relay-browser-smoke
+          name: label-relay-browser-smoke
           path: reports/browser-smoke.png
           if-no-files-found: ignore

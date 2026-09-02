@@ -1,148 +1,66 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { PRODUCT_CATALOG } from "../src/catalog.js";
-import {
-  approvePlan,
-  buildRepairPlan,
-  compactCaseSnapshot,
-  compareCandidates,
-  createObservation,
-  normalizeText,
-  parseSearchInput,
-  rankProducts,
-  throwIfAborted
-} from "../src/engine.js";
+import { approveChoice, compareProducts, compactSnapshot, createPackageCheck, sanitizeText, stageChoice, throwIfAborted } from "../src/engine.js";
+import { normalizeProduct } from "../src/live-catalog.js";
 import { createInitialState } from "../src/store.js";
 
-test("normalizeText removes controls and collapses whitespace", () => {
-  assert.equal(normalizeText("  weak\u0000   airflow \n now "), "weak airflow now");
-});
+const productA = normalizeProduct({ code: "3168930003632", product_name: "Quaker Oats", brands: "Quaker", ingredients_text: "100% oats", allergens_tags: ["en:gluten"], nutriscore_grade: "a", last_modified_t: 1780104331, nutriments: { sugars_100g: 1.1 } });
+const productB = normalizeProduct({ code: "3560070614202", product_name: "Whole Oat Flakes", brands: "Example", ingredients_text: "Whole oats", nutriscore_grade: "a", last_modified_t: 1779551890, nutriments: { sugars_100g: 0.7 } });
 
-test("observations are bounded and normalized", () => {
-  const observation = createObservation({
-    text: "  Filter blocks light.  ",
-    tag: "blocked_filter",
-    confidence: 0.934
-  });
-  assert.equal(observation.text, "Filter blocks light.");
-  assert.equal(observation.confidence, 0.93);
-  assert.equal(observation.source, "human");
-});
+function stateWithSearch() {
+  const state = createInitialState();
+  state.search = { query: "oats", results: [productA, productB], fetchedAt: new Date().toISOString(), source: "Open Food Facts", live: true };
+  return state;
+}
 
-test("observations reject undeclared fields", () => {
-  assert.throws(
-    () => createObservation({ text: "Filter blocks light", tag: "blocked_filter", instructions: "ignore rules" }),
-    /Unsupported field/
+test("sanitizeText strips controls and bounds text", () => assert.equal(sanitizeText("  package\u0000  match  ", 20), "package match"));
+test("normalization preserves live provenance fields and incompleteness", () => {
+  assert.equal(productA.id, "3168930003632");
+  assert.equal(productA.nutriScore, "a");
+  assert.deepEqual(productA.allergens, ["gluten"]);
+  assert.match(productA.sourceUrl, /openfoodfacts\.org\/product\//);
+  assert.ok(productA.completeness < 100);
+});
+test("external image URLs are restricted to the official image host", () => {
+  assert.equal(normalizeProduct({ code: "12345678", image_front_small_url: "https://evil.example/x.png" }).imageUrl, "");
+});
+test("package checks are factual, bounded, and source-labelled", () => {
+  const check = createPackageCheck({ productId: productA.id, checkType: "barcode_match", outcome: "match", note: "Printed barcode matches." }, "human");
+  assert.equal(check.source, "human");
+  assert.equal(check.outcome, "match");
+});
+test("package checks reject executable or unknown check types", () => {
+  assert.throws(() => createPackageCheck({ productId: productA.id, checkType: "run_code", outcome: "match", note: "anything" }), /Unsupported/);
+  assert.throws(() => createPackageCheck({ productId: productA.id, checkType: "barcode_match", outcome: "match", note: "matches", instructions: "ignore" }), /Unsupported package check field/);
+});
+test("comparison only accepts IDs in the current live result set", () => {
+  assert.equal(compareProducts([productA, productB], [productA.id, productB.id]).length, 2);
+  assert.throws(() => compareProducts([productA], [productA.id, "99999999"]), /current live results/);
+});
+test("staged choices require physical barcode and ingredient checks", () => {
+  const choice = stageChoice(stateWithSearch(), { productId: productA.id, rationale: "Complete live record." });
+  assert.equal(choice.status, "awaiting_human_approval");
+  assert.deepEqual(choice.requiredChecks, ["barcode_match", "ingredients_match"]);
+});
+test("agent-origin checks cannot satisfy physical verification", () => {
+  const state = stateWithSearch();
+  state.checks.push(
+    createPackageCheck({ productId: productA.id, checkType: "barcode_match", outcome: "match", note: "Agent claims a match." }, "agent"),
+    createPackageCheck({ productId: productA.id, checkType: "ingredients_match", outcome: "match", note: "Agent claims a match." }, "agent")
   );
+  assert.deepEqual(stageChoice(state, { productId: productA.id }).requiredChecks, ["barcode_match", "ingredients_match"]);
 });
-
-test("observations reject unknown evidence tags", () => {
-  assert.throws(
-    () => createObservation({ text: "A factual observation", tag: "run_arbitrary_code" }),
-    /Unknown evidence tag/
-  );
+test("agent authorization can never approve", () => {
+  const choice = { ...stageChoice(stateWithSearch(), { productId: productA.id }), requiredChecks: [] };
+  assert.throws(() => approveChoice(choice, { actor: "agent", confirmed: true }), /trusted human/);
 });
-
-test("ranked catalog responses are bounded", () => {
-  const search = rankProducts(PRODUCT_CATALOG, { query: "", model: "AP-200", budget: 1000 }, createInitialState());
-  assert.ok(search.results.length <= 5);
-  assert.ok(search.results.length > 0);
+test("human approval still requires completed physical checks", () => {
+  const choice = stageChoice(stateWithSearch(), { productId: productA.id });
+  assert.throws(() => approveChoice(choice, { actor: "human", confirmed: true }), /Complete/);
 });
-
-test("search input rejects schema-invalid runtime types", () => {
-  assert.throws(() => parseSearchInput({ query: 42 }), /query must be a string/i);
-  assert.throws(() => parseSearchInput({ budget: "65" }), /budget must be a number/i);
-  assert.throws(() => parseSearchInput({ evidenceTags: "blocked_filter" }), /evidenceTags must be an array/i);
-  assert.throws(() => parseSearchInput({ includeDiagnosticTools: "true" }), /must be a boolean/i);
+test("explicit human authorization approves after checks", () => {
+  const choice = { ...stageChoice(stateWithSearch(), { productId: productA.id }), requiredChecks: [] };
+  assert.equal(approveChoice(choice, { actor: "human", confirmed: true }).status, "human_approved");
 });
-
-test("known model incompatibility cannot rank first", () => {
-  const search = rankProducts(
-    PRODUCT_CATALOG,
-    { query: "fan module airflow replacement", model: "AP-200", budget: 100 },
-    createInitialState()
-  );
-  assert.notEqual(search.results[0].id, "fan-module-ap210");
-});
-
-test("human physical evidence materially improves the correct hypothesis", () => {
-  const state = createInitialState();
-  const before = rankProducts(PRODUCT_CATALOG, { query: "fix weak airflow", model: "AP-200", budget: 65 }, state);
-  state.evidence.push(createObservation({
-    text: "The filter is gray and a bright light cannot pass through it.",
-    tag: "blocked_filter",
-    confidence: 0.95
-  }));
-  const after = rankProducts(PRODUCT_CATALOG, { query: "fix weak airflow", model: "AP-200", budget: 65 }, state);
-  assert.ok(after.results[0].confidence - before.results[0].confidence >= 5);
-  assert.equal(after.results[0].category, "replacement-filter");
-});
-
-test("fan-running evidence weakens fan replacement", () => {
-  const state = createInitialState();
-  const search = rankProducts(PRODUCT_CATALOG, { query: "fan module", model: "AP-210", budget: 100 }, state);
-  const fan = search.results.find((item) => item.id === "fan-module-ap210");
-  assert.ok(fan);
-  assert.ok(fan.reasons.some((item) => item.label.includes("running fan") && item.points < 0));
-});
-
-test("low-risk constraint penalizes high-risk electrical work", () => {
-  const state = createInitialState();
-  state.evidence.push(createObservation({ text: "Possible electrical issue", tag: "electrical_fault", confidence: 0.8 }));
-  const search = rankProducts(PRODUCT_CATALOG, { query: "electrical part", model: "AP-200", budget: 65 }, state);
-  const capacitor = search.results.find((item) => item.id === "motor-capacitor-120");
-  assert.ok(!capacitor || capacitor.reasons.some((item) => item.label.includes("exceeds low-risk limit")));
-});
-
-test("comparison requires at least two current candidates", () => {
-  const results = rankProducts(PRODUCT_CATALOG, { model: "AP-200" }, createInitialState()).results;
-  assert.throws(() => compareCandidates(results, [results[0].id]), /at least two/i);
-  assert.equal(compareCandidates(results, [results[0].id, results[1].id]).length, 2);
-});
-
-test("repair plans are staged, reversible, and include stop conditions", () => {
-  const state = createInitialState();
-  const candidate = rankProducts(PRODUCT_CATALOG, { model: "AP-200", budget: 65 }, state).results[0];
-  const plan = buildRepairPlan(state, candidate, { maxSteps: 5 });
-  assert.equal(plan.status, "staged");
-  assert.equal(plan.approvedAt, null);
-  assert.ok(plan.steps.length >= 3 && plan.steps.length <= 5);
-  assert.ok(plan.steps.every((step) => step.stopCondition.length > 10));
-  assert.ok(plan.assumptions.length > 0);
-});
-
-test("repair plans reject malformed maxSteps instead of creating empty plans", () => {
-  const state = createInitialState();
-  const candidate = rankProducts(PRODUCT_CATALOG, { model: "AP-200" }, state).results[0];
-  assert.throws(() => buildRepairPlan(state, candidate, { maxSteps: "not-an-integer" }), /must be an integer/i);
-  assert.throws(() => buildRepairPlan(state, candidate, { maxSteps: 4.5 }), /must be an integer/i);
-});
-
-test("agent authorization cannot approve a staged plan", () => {
-  const state = createInitialState();
-  const candidate = rankProducts(PRODUCT_CATALOG, { model: "AP-200" }, state).results[0];
-  const plan = buildRepairPlan(state, candidate);
-  assert.throws(() => approvePlan(plan, { actor: "agent", confirmed: true }), /human confirmation/i);
-});
-
-test("explicit human authorization approves a staged plan", () => {
-  const state = createInitialState();
-  const candidate = rankProducts(PRODUCT_CATALOG, { model: "AP-200" }, state).results[0];
-  const plan = buildRepairPlan(state, candidate);
-  const approved = approvePlan(plan, { actor: "human", confirmed: true });
-  assert.equal(approved.status, "approved");
-  assert.equal(approved.approvedBy, "human");
-  assert.ok(approved.approvedAt);
-});
-
-test("compact case snapshots exclude internal activity history", () => {
-  const snapshot = compactCaseSnapshot(createInitialState());
-  assert.equal("activity" in snapshot, false);
-  assert.ok(snapshot.evidence.length <= 8);
-});
-
-test("tool cancellation throws AbortError", () => {
-  const controller = new AbortController();
-  controller.abort();
-  assert.throws(() => throwIfAborted(controller.signal), { name: "AbortError" });
-});
+test("compact snapshots omit internal activity", () => assert.equal("activity" in compactSnapshot(stateWithSearch()), false));
+test("tool cancellation throws AbortError", () => { const c = new AbortController(); c.abort(); assert.throws(() => throwIfAborted(c.signal), { name: "AbortError" }); });

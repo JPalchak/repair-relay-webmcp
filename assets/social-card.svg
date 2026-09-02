@@ -1,12 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <rect width="1200" height="630" fill="#f4f1e8"/>
-  <rect x="52" y="52" width="1096" height="526" rx="42" fill="#132521"/>
-  <circle cx="1015" cy="145" r="84" fill="#d4e157"/>
-  <path d="M896 460c45-111 104-166 176-166" fill="none" stroke="#f4f1e8" stroke-width="34" stroke-linecap="round"/>
-  <path d="M896 507h87c70 0 112-39 137-119" fill="none" stroke="#e56b46" stroke-width="34" stroke-linecap="round"/>
-  <text x="112" y="150" fill="#d4e157" font-size="28" font-family="Arial, sans-serif" letter-spacing="3">HUMAN + AGENT REPAIR BENCH</text>
-  <text x="112" y="270" fill="#f4f1e8" font-size="76" font-weight="700" font-family="Arial, sans-serif">Repair Relay</text>
-  <text x="112" y="360" fill="#f4f1e8" font-size="36" font-family="Arial, sans-serif">The human is the sensor.</text>
-  <text x="112" y="410" fill="#f4f1e8" font-size="36" font-family="Arial, sans-serif">The agent is the systems thinker.</text>
-  <text x="112" y="500" fill="#b8c6c1" font-size="26" font-family="Arial, sans-serif">Shared state · evidence-sensitive ranking · human-only approval</text>
+  <rect width="1200" height="630" fill="#f3f1e8"/>
+  <path d="M0 0h1200v18H0z" fill="#2058f5"/>
+  <rect x="62" y="62" width="1076" height="506" rx="32" fill="#171713"/>
+  <text x="112" y="145" fill="#d7ff43" font-size="27" font-family="monospace" letter-spacing="3">LIVE CATALOG × PHYSICAL REALITY</text>
+  <text x="112" y="270" fill="#fffef8" font-size="84" font-weight="700" font-family="Arial, sans-serif">Label Relay</text>
+  <text x="112" y="355" fill="#fffef8" font-size="36" font-family="Arial, sans-serif">Agents search what the world knows.</text>
+  <text x="112" y="405" fill="#fffef8" font-size="36" font-family="Arial, sans-serif">People verify what is in their hands.</text>
+  <text x="112" y="500" fill="#aead9f" font-size="25" font-family="Arial, sans-serif">Open Food Facts · WebMCP · human-only approval</text>
+  <rect x="895" y="120" width="176" height="235" fill="#fffef8" stroke="#d7ff43" stroke-width="12"/>
+  <path d="M930 160v150m24-150v150m38-150v150m20-150v150" stroke="#171713" stroke-width="12"/>
+  <circle cx="1035" cy="410" r="62" fill="#2058f5"/><path d="m1007 410 20 21 38-47" fill="none" stroke="white" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

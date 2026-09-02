@@ -1,18 +1,16 @@
-# Security model
+# Security and trust boundaries
 
-Repair Relay is intentionally a local, static demonstration. It has no account system, server-side secrets, payments, purchasing, or remote write APIs.
+Label Relay has no accounts, secrets, payments, analytics, background tracking, or external write operations. Its only network activity is an explicit read request to Open Food Facts.
 
-## Trust boundaries
+- Product records and human/agent notes are untrusted. Rendering uses `textContent`; no API text is injected as HTML.
+- Product image URLs are accepted only from `https://images.openfoodfacts.org`.
+- Tool inputs have closed schemas and are validated again at runtime.
+- Tool outputs are bounded to 1,500 characters.
+- Live failures remain failures; no fixture is presented as real data.
+- Search is explicit and cached for five minutes to reduce rate-limit pressure.
+- A staged choice is not approval. Barcode and ingredients matches are required, and only a trusted visible click can approve.
+- No WebMCP tool can approve, purchase, ingest, or make a medical decision.
 
-- Product records and user-entered observations are treated as untrusted text.
-- The renderer uses `textContent`; it never injects catalog or tool input with `innerHTML`.
-- WebMCP inputs are validated again at execution time, even though each tool publishes a strict JSON Schema with `additionalProperties: false`.
-- Read-only tools are annotated with `readOnlyHint`.
-- Tool responses are bounded to avoid returning the whole catalog or an unbounded case log.
-- Tools may stage a proposal or open the review surface, but no WebMCP tool can approve a repair plan.
-- Plan approval requires a deliberate human interaction in the visible page. The domain reducer additionally rejects approval requests whose actor is not `human`.
-- Cancellation is honored through the `AbortSignal` supplied to each tool execution.
+Open Food Facts data can be inaccurate or incomplete. The physical label is authoritative, especially for allergens. Label Relay is an information and verification prototype, not medical advice.
 
-## Reporting
-
-Open a GitHub issue without including private personal information. This demonstration does not collect or transmit data.
+Report vulnerabilities through the public repository's Security tab or issue tracker without including sensitive personal information.

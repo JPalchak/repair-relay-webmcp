@@ -3,251 +3,121 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Repair Relay is an evidence-first shared repair bench for people and browser agents, powered by WebMCP.">
-  <meta name="theme-color" content="#132521">
-  <meta property="og:title" content="Repair Relay — Human + Agent Repair Bench">
-  <meta property="og:description" content="The human is the sensor. The agent is the systems thinker. Both share one visible repair state.">
+  <meta name="description" content="Label Relay pairs live Open Food Facts records with human verification of the physical package through WebMCP.">
+  <meta name="theme-color" content="#171713">
+  <meta property="og:title" content="Label Relay — Live Product Truth, Human Verified">
+  <meta property="og:description" content="Agents search the live catalog. People verify the package. Neither works alone.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="assets/social-card.svg">
-  <title>Repair Relay — Human + Agent Repair Bench</title>
+  <title>Label Relay — Live Product Truth, Human Verified</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <a class="skip-link" href="#workspace">Skip to workbench</a>
-
+  <a class="skip-link" href="#workspace">Skip to workspace</a>
   <header class="site-header">
-    <a class="brand" href="#" aria-label="Repair Relay home">
-      <img src="assets/icon.svg" alt="" width="38" height="38">
-      <span>Repair Relay</span>
-    </a>
-    <div class="header-actions">
-      <span id="webmcp-status" class="status-pill status-neutral">
-        <span class="status-dot" aria-hidden="true"></span>
-        Detecting WebMCP
-      </span>
-      <button id="reset-button" class="button button-quiet" type="button">Reset case</button>
-    </div>
+    <a class="brand" href="#" aria-label="Label Relay home"><img src="assets/icon.svg" alt="" width="38" height="38"><span>LABEL RELAY</span></a>
+    <div class="header-actions"><span id="webmcp-status" class="status-pill status-neutral">Detecting WebMCP</span><button id="reset-button" class="button button-quiet" type="button">Reset</button></div>
   </header>
 
   <main id="workspace">
-    <section class="hero" aria-labelledby="page-title">
+    <section class="hero">
       <div>
-        <p class="eyebrow">Evidence-first human–agent collaboration</p>
-        <h1 id="page-title">The human is the sensor.<br>The agent is the systems thinker.</h1>
-        <p class="hero-copy">
-          Repair Relay gives both of them one shared, visible workbench. An agent can search,
-          compare, and stage a repair plan. A person can inspect the physical device, add evidence,
-          challenge assumptions, and make the final decision.
-        </p>
+        <p class="eyebrow">Live catalog × physical reality</p>
+        <h1>The database knows millions.<br><em>You know this package.</em></h1>
+        <p class="hero-copy">Label Relay lets an agent search and compare current Open Food Facts records while you verify what only a person holding the package can know. Every recommendation stays provisional until the physical barcode and ingredients agree.</p>
       </div>
-      <aside class="demo-card" aria-label="Suggested agent prompt">
-        <span class="demo-card-label">Try with a WebMCP agent</span>
-        <p id="suggested-prompt">Inspect this case, search for the best compatible fix under my budget, and explain what evidence would change your recommendation.</p>
-        <button id="copy-prompt-button" class="button button-secondary" type="button">Copy prompt</button>
+      <aside class="agent-card" aria-label="Suggested WebMCP prompt">
+        <div class="agent-card-head"><span class="pulse" aria-hidden="true"></span><strong>TRY WITH A WEBMCP AGENT</strong></div>
+        <p id="suggested-prompt">Search the live catalog for oat cereal, compare the most complete records, then stage one choice and tell me exactly what to verify on the package.</p>
+        <button id="copy-prompt-button" class="button button-accent" type="button">Copy prompt</button>
       </aside>
     </section>
 
-    <section class="relay-strip" aria-label="Collaboration model">
-      <div><span>1</span><strong>Agent proposes a test</strong><small>Structured tool call</small></div>
-      <div class="relay-arrow" aria-hidden="true">→</div>
-      <div><span>2</span><strong>Human checks reality</strong><small>Sight, sound, fit, measurement</small></div>
-      <div class="relay-arrow" aria-hidden="true">→</div>
-      <div><span>3</span><strong>Agent reranks the plan</strong><small>Same page state</small></div>
-      <div class="relay-arrow" aria-hidden="true">→</div>
-      <div><span>4</span><strong>Human approves</strong><small>Visible authority boundary</small></div>
+    <section class="proof-strip" aria-label="Collaboration sequence">
+      <div><b>01</b><span><strong>Agent searches live</strong><small>Current external records</small></span></div>
+      <div><b>02</b><span><strong>Person checks package</strong><small>Barcode + ingredients</small></span></div>
+      <div><b>03</b><span><strong>Shared state updates</strong><small>Visible to both</small></span></div>
+      <div><b>04</b><span><strong>Person decides</strong><small>Human-only approval</small></span></div>
     </section>
 
-    <section class="case-bar" aria-labelledby="case-heading">
-      <div>
-        <p class="section-kicker">Active repair case</p>
-        <h2 id="case-heading">AirPure AP-200 has weak airflow</h2>
+    <section class="search-deck" aria-labelledby="search-heading">
+      <div class="search-intro">
+        <p class="section-kicker">Open Food Facts · live production API</p>
+        <h2 id="search-heading">Search what is actually out there</h2>
+        <p id="source-line">Every result will show its source and fetch time. No fixture fallback exists.</p>
       </div>
-      <dl class="case-facts">
-        <div><dt>Device</dt><dd id="device-model">AP-200 · 120 V</dd></div>
-        <div><dt>Budget</dt><dd id="budget">$65</dd></div>
-        <div><dt>Risk limit</dt><dd id="risk-limit">Low</dd></div>
-        <div><dt>Case confidence</dt><dd id="case-confidence">42%</dd></div>
-      </dl>
+      <form id="search-form" class="search-form">
+        <label for="search-query">Product, brand, or food phrase</label>
+        <div><input id="search-query" name="query" value="oat cereal" minlength="2" maxlength="80" required><button class="button button-primary" type="submit">Search live data</button></div>
+      </form>
+      <div class="or-divider">or</div>
+      <form id="barcode-form" class="barcode-form">
+        <label for="barcode-input">Barcode on the package</label>
+        <div><input id="barcode-input" name="barcode" inputmode="numeric" placeholder="e.g. 3168930003632" minlength="8" maxlength="20" required><button class="button button-quiet" type="submit">Look up</button></div>
+      </form>
+      <span id="search-status" class="status-pill status-neutral">No search yet</span>
     </section>
+    <p id="search-error" class="error-banner" role="alert" hidden></p>
 
     <div class="workspace-grid">
-      <section class="panel evidence-panel" aria-labelledby="evidence-heading">
-        <div class="panel-heading">
-          <div>
-            <p class="section-kicker">Human lane</p>
-            <h2 id="evidence-heading">Physical evidence</h2>
-          </div>
-          <span id="evidence-count" class="count-badge">0</span>
-        </div>
-        <p class="panel-intro">The agent cannot see through the housing or feel the airflow. You can.</p>
-
-        <ol id="evidence-list" class="evidence-list" aria-live="polite"></ol>
-
-        <form id="observation-form" class="observation-form">
-          <label for="observation-text">Add what you observed</label>
-          <textarea id="observation-text" name="text" rows="3" maxlength="280" placeholder="Example: The filter is gray and no light passes through it." required></textarea>
-          <div class="form-row">
-            <label>
-              Signal
-              <select id="observation-tag" name="tag">
-                <option value="blocked_filter">Blocked filter</option>
-                <option value="low_airflow">Low airflow</option>
-                <option value="fan_running">Fan is running</option>
-                <option value="rattle">Rattle or vibration</option>
-                <option value="odor">Odor</option>
-                <option value="electrical_fault">Electrical fault</option>
-                <option value="measurement">Measurement</option>
-              </select>
-            </label>
-            <label>
-              Confidence
-              <select id="observation-confidence" name="confidence">
-                <option value="0.95">Certain</option>
-                <option value="0.75" selected>Likely</option>
-                <option value="0.5">Unsure</option>
-              </select>
-            </label>
-          </div>
-          <button class="button button-primary" type="submit">Record evidence</button>
-        </form>
-
-        <button id="demo-evidence-button" class="button button-demo" type="button">
-          Add demo finding: filter blocks light
-        </button>
-      </section>
-
-      <section class="panel recommendation-panel" aria-labelledby="recommendations-heading">
-        <div class="panel-heading">
-          <div>
-            <p class="section-kicker">Shared analysis</p>
-            <h2 id="recommendations-heading">Evidence-weighted options</h2>
-          </div>
-          <span id="ranking-state" class="count-badge">Awaiting search</span>
-        </div>
-        <p class="panel-intro">
-          Compatibility is a hard constraint. Evidence changes ranking; it never silently changes the facts.
-        </p>
-
-        <div id="recommendation-empty" class="empty-state">
-          <div class="empty-icon" aria-hidden="true">↗</div>
-          <h3>No search has run yet</h3>
-          <p>Ask your agent to use <code>search_products</code>, or run the deterministic demo.</p>
-          <button id="run-search-button" class="button button-primary" type="button">Run demo search</button>
-        </div>
-
-        <div id="recommendation-results" hidden>
-          <div id="ranking-explanation" class="ranking-explanation"></div>
-          <ol id="product-list" class="product-list" aria-live="polite"></ol>
-        </div>
-
-        <section id="comparison-panel" class="comparison-panel" hidden aria-labelledby="comparison-heading">
-          <div class="subheading-row">
-            <h3 id="comparison-heading">Comparison</h3>
-            <button id="clear-comparison-button" class="text-button" type="button">Clear</button>
-          </div>
-          <div id="comparison-table-wrap"></div>
+      <section class="panel results-panel" aria-labelledby="results-heading">
+        <div class="panel-heading"><div><p class="section-kicker">Agent-scale view</p><h2 id="results-heading">Live records</h2></div><span class="source-badge">OPEN DATA</span></div>
+        <div id="result-empty" class="empty-state"><strong>No live records yet</strong><p>Run a search above. If the external service is unavailable, Label Relay shows the error and never substitutes dummy data.</p></div>
+        <ol id="product-list" class="product-list" aria-live="polite"></ol>
+        <section id="comparison-panel" class="comparison-panel" hidden>
+          <div class="subheading"><h3>Side-by-side evidence</h3><button id="clear-comparison-button" class="text-button" type="button">Clear</button></div>
+          <div id="comparison-wrap" class="table-wrap"></div>
         </section>
       </section>
 
-      <section class="panel plan-panel" aria-labelledby="plan-heading">
-        <div class="panel-heading">
-          <div>
-            <p class="section-kicker">Decision lane</p>
-            <h2 id="plan-heading">Staged repair plan</h2>
-          </div>
-          <span id="plan-status" class="status-pill status-neutral">No draft</span>
-        </div>
-        <p class="panel-intro">
-          The agent may stage and revise a proposal. Only the person at this workbench can approve it.
-        </p>
-
-        <div id="plan-empty" class="empty-state compact">
-          <div class="empty-icon" aria-hidden="true">≡</div>
-          <h3>Nothing staged</h3>
-          <p>Select a candidate and stage a plan, or delegate it to your agent.</p>
-        </div>
-
-        <article id="plan-card" class="plan-card" hidden>
-          <div class="plan-meta">
-            <span id="plan-risk" class="risk-badge">Low risk</span>
-            <span id="plan-version">Draft 1</span>
-          </div>
-          <h3 id="plan-title"></h3>
-          <ol id="plan-steps"></ol>
-          <div class="assumption-box">
-            <strong>Assumptions still visible</strong>
-            <ul id="plan-assumptions"></ul>
-          </div>
-          <div id="approval-gate" class="approval-gate">
-            <label class="consent-check">
-              <input id="approval-checkbox" type="checkbox">
-              <span>I reviewed the steps, compatibility, and stop conditions.</span>
-            </label>
-            <button id="approve-button" class="button button-approve" type="button" disabled>
-              Approve as the person at the bench
-            </button>
-            <p id="approval-note">No agent tool has approval authority.</p>
-          </div>
-        </article>
-
-        <section class="luna-panel" aria-labelledby="luna-heading">
-          <div class="subheading-row">
-            <div>
-              <span class="luna-mark" aria-hidden="true">◐</span>
-              <h3 id="luna-heading">Luna review</h3>
+      <aside class="rail">
+        <section class="panel human-panel" aria-labelledby="human-heading">
+          <div class="panel-heading"><div><p class="section-kicker">Human-only evidence</p><h2 id="human-heading">Check the package</h2></div><span id="check-count" class="count-badge">0</span></div>
+          <p class="panel-copy">The database can be stale or incomplete. Record what the physical label says; agent-supplied text is treated as untrusted evidence.</p>
+          <form id="check-form" class="check-form">
+            <label>Live result<select id="check-product" required><option value="">Choose a live result…</option></select></label>
+            <div class="form-row">
+              <label>Check<select id="check-type"><option value="barcode_match">Barcode match</option><option value="ingredients_match">Ingredients match</option><option value="allergens_match">Allergens match</option><option value="package_date">Package date</option><option value="available_here">Available here</option></select></label>
+              <label>Outcome<select id="check-outcome"><option value="match">Match</option><option value="mismatch">Mismatch</option><option value="unclear">Unclear</option></select></label>
             </div>
-            <button id="run-luna-button" class="text-button" type="button">Run now</button>
-          </div>
-          <p id="luna-summary">Reviewing this collaboration loop…</p>
-          <ul id="luna-suggestions"></ul>
-          <small id="luna-timestamp"></small>
+            <label>What you observed<textarea id="check-note" rows="2" maxlength="240" placeholder="The printed barcode and first ingredients match." required></textarea></label>
+            <button class="button button-primary" type="submit">Record physical check</button>
+          </form>
+          <ol id="check-list" class="check-list" aria-live="polite"></ol>
         </section>
-      </section>
+
+        <section id="choice-panel" class="panel choice-panel" aria-labelledby="choice-heading">
+          <div class="panel-heading"><div><p class="section-kicker">Decision boundary</p><h2 id="choice-heading">Staged choice</h2></div><span id="choice-status" class="status-pill status-neutral">Nothing staged</span></div>
+          <div id="choice-empty" class="empty-state compact"><strong>Stage a live result</strong><p>An agent may propose. It cannot approve.</p></div>
+          <article id="choice-card" hidden>
+            <h3 id="choice-title"></h3><p id="choice-brand" class="product-brand"></p><p id="choice-rationale"></p>
+            <ul id="required-checks" class="required-checks"></ul>
+            <div class="approval-gate">
+              <label class="consent"><input id="approval-checkbox" type="checkbox"><span>I compared this record with the physical package and accept the remaining uncertainty.</span></label>
+              <button id="approve-button" class="button button-approve" type="button" disabled>Approve this verified choice</button>
+              <p id="approval-note">No WebMCP tool can approve.</p>
+            </div>
+          </article>
+        </section>
+      </aside>
     </div>
 
-    <section class="activity-section" aria-labelledby="activity-heading">
-      <div class="panel-heading">
-        <div>
-          <p class="section-kicker">Inspectable state</p>
-          <h2 id="activity-heading">Relay log</h2>
-        </div>
-        <span class="status-pill status-safe">Local only</span>
-      </div>
-      <ol id="activity-log" class="activity-log" aria-live="polite"></ol>
+    <section class="inspect-grid">
+      <div class="panel activity-panel"><div class="panel-heading"><div><p class="section-kicker">Shared state</p><h2>Relay log</h2></div><span class="source-badge">VISIBLE</span></div><ol id="activity-log" class="activity-log"></ol></div>
+      <div class="panel tools-panel"><div><p class="section-kicker">Native WebMCP</p><h2>Eight narrow tools</h2><p>Calls update the same interface the person sees. Live external content is marked untrusted; approval is absent by design.</p></div><div id="tool-list" class="tool-list"></div></div>
     </section>
 
-    <section class="tools-section" aria-labelledby="tools-heading">
-      <div>
-        <p class="section-kicker">WebMCP surface</p>
-        <h2 id="tools-heading">Eight narrow tools, one shared interface</h2>
-        <p>
-          The tools expose capabilities, not hidden authority. Every state-changing call is reflected
-          in the page so the person can inspect, challenge, or continue the work.
-        </p>
-      </div>
-      <div id="tool-list" class="tool-list"></div>
-    </section>
+    <footer>
+      <p>Data: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer">Open Food Facts</a> under ODbL. Product images are available under CC BY-SA; packaging may include third-party rights. Records are community-contributed and may be inaccurate or incomplete—always verify the physical label.</p>
+      <p><a href="https://github.com/JPalchak/repair-relay-webmcp" target="_blank" rel="noopener noreferrer">Source code</a> · MIT licensed · No purchases, medical decisions, or background tracking</p>
+    </footer>
   </main>
 
-  <dialog id="decision-dialog" class="decision-dialog" aria-labelledby="decision-title">
-    <form method="dialog">
-      <button class="dialog-close" value="cancel" aria-label="Close">×</button>
-      <p class="section-kicker">Human checkpoint requested</p>
-      <h2 id="decision-title">Review the staged plan</h2>
-      <p id="decision-reason">The agent has reached a decision boundary.</p>
-      <div id="decision-summary" class="dialog-summary"></div>
-      <button class="button button-primary" value="review">Continue to visible review</button>
-    </form>
-  </dialog>
-
-  <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
-
-  <noscript>
-    <div class="noscript">Repair Relay requires JavaScript to run the shared workbench.</div>
-  </noscript>
-
+  <dialog id="decision-dialog" class="decision-dialog"><form method="dialog"><button class="dialog-close" value="cancel" aria-label="Close">×</button><p class="section-kicker">Human checkpoint</p><h2>Reality check required</h2><p id="decision-reason"></p><div id="decision-summary" class="dialog-summary"></div><button class="button button-primary" value="review">Review in the workspace</button></form></dialog>
+  <div id="toast-region" class="toast-region" aria-live="polite"></div>
+  <noscript><div class="error-banner">Label Relay requires JavaScript for live data and WebMCP.</div></noscript>
   <script type="module" src="src/app.js"></script>
 </body>
 </html>

@@ -1,29 +1,15 @@
-# Tested clients and agent surfaces
+# Tested browser-agent behavior
 
-## Automated Chromium WebMCP contract harness
+The release harness launches Chromium with `--enable-features=WebMCP,WebMCPTesting`, injects only a minimal `document.modelContext` capture layer, and uses the app's real tool definitions, callbacks, DOM, external API, and trusted user clicks.
 
-The public deployment was tested in Chromium with WebMCP feature flags enabled and a deterministic `document.modelContext` registration harness injected before page load. This validates the page's actual tool definitions, callbacks, state mutations, DOM rendering, and human-only approval flow without depending on a particular experimental browser-agent UI.
+Verified:
 
-The smoke test verifies:
-
-- eight WebMCP tools register successfully;
+- exactly eight closed-schema tools register;
 - `search_products` has the exact required description;
-- every schema is closed;
-- physical evidence materially changes the ranking;
-- the staged plan remains unapproved;
-- no approval or authorization tool is exposed;
-- the human checkpoint opens visibly;
-- a trusted UI action records human approval;
-- `get_approved_plan` becomes readable only afterward;
-- Luna returns 30/30;
-- the page emits no runtime errors.
+- live Open Food Facts provenance and fetch time reach the page;
+- no Luna, approval, purchase, or checkout tool exists;
+- the agent can stage but cannot approve;
+- two physical package checks unlock the visible consent control;
+- the trusted human click is required before `get_approved_choice` returns an approved result.
 
-## Manual judge clients
-
-The repository includes explicit procedures for:
-
-- ChatGPT's in-app browser;
-- Google Chrome with `chrome://flags/#enable-webmcp-testing` enabled;
-- Chrome DevTools → Application → WebMCP inspection.
-
-No claim is made that the automated harness is the browser vendor's native WebMCP implementation. It exercises the standards-shaped page contract and the real application workflow while the experimental client surface remains browser-version dependent.
+The capture layer proves application integration and lifecycle deterministically. Judges should also run the native Chrome procedure in `docs/browser-test.md` with `chrome://flags/#enable-webmcp-testing` enabled.

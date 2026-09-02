@@ -18,4 +18,4 @@ for (const entry of [
   await cp(resolve(root, entry), resolve(dist, entry), { recursive: true });
 }
 
-console.log("Built static Repair Relay site in dist/.");
+console.log("Built static Label Relay site in dist/.");

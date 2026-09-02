@@ -1,14 +1,14 @@
-# Evaluation rubric
+# Development review rubric
 
-Repair Relay is routinely evaluated on a 30-point rubric.
+The recurring Luna development subagent reviews each checkpoint and reports suggestions to the main development thread. It is not included in the deployed product.
 
-| Dimension | Full-score evidence |
+| Dimension | Release question |
 |---|---|
-| Usefulness | The agent and person complete a concrete repair decision faster and with fewer unsupported leaps |
-| Originality | The result depends on human physical evidence and agent recomputation, not generic chat or click automation |
-| Execution | The app is coherent, runnable, accessible, tested, and visibly stateful |
-| WebMCP leverage | Multiple typed tools operate on the real page state and compose into a workflow |
-| Human-agent experience | Each participant contributes a distinct capability and the handoffs are visible |
-| Safety and trust | Inputs and outputs are bounded, assumptions remain visible, and approval stays human-only |
+| Usefulness | Does the workflow resolve a real gap between live database scale and physical verification? |
+| Originality | Is the human contribution essential rather than decorative? |
+| Execution | Do live data, errors, freshness, and incomplete fields behave honestly? |
+| WebMCP leverage | Do narrow tools update shared visible state more reliably than UI automation? |
+| Human-agent experience | Can either collaborator understand what happened and what remains? |
+| Trust | Are external data untrusted, consequential authority human-only, and claims bounded? |
 
-A score below 5 in any dimension creates an improvement suggestion. The command-line reviewer additionally fails on structural blockers, including missing registration, an incorrect required tool contract, open schemas, or agent approval authority.
+Automated `npm run eval` covers corresponding invariants. Luna adds adversarial qualitative review before implementation, after implementation, and before release.

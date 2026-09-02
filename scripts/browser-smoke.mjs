@@ -5,149 +5,50 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const target = process.env.LIVE_URL || "http://127.0.0.1:4173";
-let server = null;
-
-async function waitForUrl(url, attempts = 50) {
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    try {
-      const response = await fetch(url);
-      if (response.ok) return;
-    } catch {}
-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
-  }
-  throw new Error(`Unable to reach ${url}`);
-}
-
-if (!process.env.LIVE_URL) {
-  server = spawn(process.execPath, [resolve(root, "scripts/serve.mjs")], {
-    cwd: root,
-    stdio: "ignore"
-  });
-}
+let server;
+async function waitFor(url) { for (let i=0;i<60;i+=1) { try { if ((await fetch(url)).ok) return; } catch {} await new Promise((r)=>setTimeout(r,150)); } throw new Error(`Unable to reach ${url}`); }
+if (!process.env.LIVE_URL) server = spawn(process.execPath,[resolve(root,"scripts/serve.mjs")],{cwd:root,stdio:"ignore"});
 
 try {
-  await waitForUrl(target);
+  await waitFor(target);
   const { chromium } = await import("playwright");
-  const browser = await chromium.launch({
-    headless: true,
-    args: ["--enable-features=WebMCP,WebMCPTesting"]
+  const browser = await chromium.launch({ headless:true, args:["--enable-features=WebMCP,WebMCPTesting"] });
+  const page = await browser.newPage({ viewport:{width:1440,height:1000} });
+  const errors=[]; page.on("pageerror",(error)=>errors.push(error.message));
+  await page.addInitScript(()=>{
+    const registered=new Map();
+    Object.defineProperty(Document.prototype,"modelContext",{configurable:true,get(){return{async registerTool(tool){if(registered.has(tool.name))throw new DOMException("Duplicate tool","InvalidStateError");registered.set(tool.name,tool)},async getTools(){return[...registered.values()]}}}});
+    window.__registeredWebMCPTools=registered;
   });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
-  const runtimeErrors = [];
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
+  await page.goto(target,{waitUntil:"domcontentloaded"});
+  await page.waitForFunction(()=>window.__labelRelay?.toolNames?.length===8);
+  const registered=await page.evaluate(()=>[...window.__registeredWebMCPTools.values()].map((tool)=>({name:tool.name,description:tool.description,closed:tool.inputSchema?.additionalProperties===false,untrusted:tool.annotations?.untrustedContentHint===true})));
+  if(registered.length!==8||!registered.every((t)=>t.closed))throw new Error("WebMCP registration contract failed.");
+  const required=registered.find((t)=>t.name==="search_products");
+  if(required?.description!=="Search the product catalog")throw new Error("Required search_products contract changed.");
+  if(registered.some((t)=>/^(?:luna|approve|purchase|checkout)(?:_|$)/i.test(t.name)))throw new Error("Development or authority tool leaked into WebMCP.");
 
-  await page.addInitScript(() => {
-    const registered = new Map();
-    Object.defineProperty(Document.prototype, "modelContext", {
-      configurable: true,
-      get() {
-        return {
-          async registerTool(tool) {
-            if (registered.has(tool.name)) throw new DOMException("Duplicate tool", "InvalidStateError");
-            registered.set(tool.name, tool);
-          },
-          async getTools() {
-            return [...registered.values()];
-          }
-        };
-      }
-    });
-    window.__registeredWebMCPTools = registered;
-  });
-
-  await page.goto(target, { waitUntil: "networkidle" });
-  await page.waitForFunction(() => window.__repairRelay?.toolNames?.length === 8);
-
-  const registered = await page.evaluate(() =>
-    [...window.__registeredWebMCPTools.values()].map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      closed: tool.inputSchema?.additionalProperties === false
-    }))
-  );
-  if (registered.length !== 8) throw new Error(`Expected 8 registered tools, found ${registered.length}.`);
-  if (!registered.every((tool) => tool.closed)) throw new Error("At least one registered schema is not closed.");
-  const required = registered.find((tool) => tool.name === "search_products");
-  if (!required || required.description !== "Search the product catalog") {
-    throw new Error("Required search_products contract is missing or changed.");
+  await page.waitForSelector("#product-list .product-card",{timeout:30000});
+  const liveState=await page.evaluate(()=>window.__labelRelay.getState().search);
+  if(!liveState?.live||liveState.source!=="Open Food Facts"||!liveState.fetchedAt)throw new Error("Browser did not receive provenance-rich live data.");
+  const ids=liveState.results.slice(0,2).map((product)=>product.id);
+  await page.evaluate(async(productIds)=>window.__registeredWebMCPTools.get("compare_products").execute({productIds},{}),ids);
+  await page.evaluate(async(productId)=>window.__registeredWebMCPTools.get("stage_verified_choice").execute({productId,rationale:"Most complete live record; physical verification remains required."},{}),ids[0]);
+  const id=ids[0];
+  for(const [type,note] of [["barcode_match",`Printed barcode ${id} matches.`],["ingredients_match","The first ingredients on the package match the displayed record."]]){
+    await page.locator("#check-product").selectOption(id);
+    await page.locator("#check-type").selectOption(type);
+    await page.locator("#check-outcome").selectOption("match");
+    await page.locator("#check-note").fill(note);
+    await page.locator("#check-form button[type=submit]").click();
   }
-  if (registered.some((tool) => /^(approve|authorize)(_|$)/i.test(tool.name))) {
-    throw new Error("An agent approval tool is exposed.");
-  }
-
-  await page.evaluate(async () => {
-    await window.__repairRelay.invokeTool("search_products", {
-      query: "restore weak airflow with a direct-fit filter",
-      model: "AP-200",
-      budget: 65
-    });
-  });
-  await page.waitForSelector("#product-list .product-card");
-  const before = await page.evaluate(() => window.__repairRelay.getState().search.results[0].confidence);
-
-  await page.evaluate(async () => {
-    await window.__repairRelay.invokeTool("record_observation", {
-      text: "The filter is gray and a bright light cannot pass through the media.",
-      tag: "blocked_filter",
-      confidence: 0.95
-    });
-    await window.__repairRelay.invokeTool("search_products", {
-      query: "restore weak airflow with a direct-fit filter",
-      model: "AP-200",
-      budget: 65
-    });
-  });
-  const after = await page.evaluate(() => window.__repairRelay.getState().search.results[0].confidence);
-  if (after - before < 5) throw new Error(`Physical evidence changed confidence by only ${after - before}.`);
-
-  const candidateId = await page.evaluate(() => window.__repairRelay.getState().search.results[0].id);
-  await page.evaluate(async (id) => {
-    await window.__repairRelay.invokeTool("stage_repair_plan", {
-      candidateId: id,
-      objective: "Restore AP-200 airflow safely"
-    });
-  }, candidateId);
-  const staged = await page.evaluate(() => window.__repairRelay.getState().stagedPlan);
-  if (staged.status !== "staged" || staged.approvedAt !== null) throw new Error("Staged plan was implicitly approved.");
-
-  await page.evaluate(async () => {
-    await window.__repairRelay.invokeTool("request_human_decision", {
-      reason: "The compatibility and stop conditions are ready for human review."
-    });
-  });
-  await page.waitForFunction(() => document.querySelector("#decision-dialog")?.open === true);
-  await page.locator("#decision-dialog button[value=review]").click();
   await page.locator("#approval-checkbox").check();
   await page.locator("#approve-button").click();
-
-  const approved = JSON.parse(
-    await page.evaluate(async () => window.__repairRelay.invokeTool("get_approved_plan", {}))
-  );
-  if (!approved.approved || approved.plan.approvedBy !== "human") {
-    throw new Error("Trusted human approval did not become readable to the agent.");
-  }
-
-  const luna = JSON.parse(
-    await page.evaluate(async () => window.__repairRelay.invokeTool("run_luna_review", {}))
-  );
-  if (luna.score !== 30) throw new Error(`Luna score was ${luna.score}/30.`);
-  if (runtimeErrors.length) throw new Error(`Page errors: ${runtimeErrors.join(" | ")}`);
-
-  await mkdir(resolve(root, "reports"), { recursive: true });
-  await page.screenshot({ path: resolve(root, "reports/browser-smoke.png"), fullPage: true });
-
-  console.log(JSON.stringify({
-    passed: true,
-    target,
-    registeredTools: registered.length,
-    evidenceConfidenceDelta: after - before,
-    stagedStatus: staged.status,
-    approvedBy: approved.plan.approvedBy,
-    lunaScore: luna.score,
-    runtimeErrors
-  }, null, 2));
-
+  const approved=JSON.parse(await page.evaluate(()=>window.__registeredWebMCPTools.get("get_approved_choice").execute({},{})));
+  if(!approved.approved||approved.choice.status!=="human_approved")throw new Error("Trusted human approval did not become agent-readable.");
+  if(errors.length)throw new Error(`Page errors: ${errors.join(" | ")}`);
+  await mkdir(resolve(root,"reports"),{recursive:true});
+  await page.screenshot({path:resolve(root,"reports/browser-smoke.png"),fullPage:true});
+  console.log(JSON.stringify({passed:true,target,registeredTools:registered.length,liveSource:liveState.source,fetchedAt:liveState.fetchedAt,sampleProduct:liveState.results[0].name,approvedBy:"human",runtimeErrors:errors},null,2));
   await browser.close();
-} finally {
-  server?.kill("SIGTERM");
-}
+} finally { server?.kill("SIGTERM"); }

@@ -1,21 +1,12 @@
 # Threat model
 
-## Protected properties
-
-- Compatibility constraints cannot be overridden by catalog prose.
-- Untrusted observations cannot execute code or write arbitrary state.
-- Agent tools cannot approve a repair.
-- Tool responses remain bounded.
-- The person can see every consequential state change.
-
-## Primary threats and controls
-
-| Threat | Control |
+| Risk | Control |
 |---|---|
-| Prompt injection in product or observation text | Inputs are normalized; schemas are closed; text is rendered with `textContent`; evidence is treated as data |
-| Agent invents compatibility | Model compatibility is computed from structured catalog fields and exposed in the UI |
-| Agent stages unsafe work | Case risk limit penalizes high-risk parts; plans include stop conditions; electrical enclosure work is excluded |
-| Agent silently approves | No approval tool; reducer requires confirmed human actor; UI requires trusted interaction |
-| Excessive data return | Search returns at most five results; snapshots and activity are bounded |
-| Long-running tool continues after cancellation | Tool callbacks check the execution `AbortSignal` |
-| Reviewer mistakes readback for authority | Luna's prohibition matches tool names that grant approval, not `get_approved_plan` |
+| Product text contains prompt injection | `untrustedContentHint`; `textContent`; no instructions executed from records |
+| Malicious image URL | Only `images.openfoodfacts.org` HTTPS URLs accepted |
+| Community record is stale or incomplete | Fetch and modification times, completeness score, missing-field language, physical checks |
+| API outage is hidden | Visible typed error; no fixture fallback |
+| Rate-limit abuse | Explicit search only; five-minute in-memory cache; bounded page size |
+| Agent invents a barcode check | Check is visible and source-labelled; final approval remains human-only |
+| Agent crosses decision boundary | No approval tool/debug method; trusted click and required checks enforced in reducer |
+| Sensitive action is inferred from choice | No purchase, checkout, ingestion, or medical-decision capability |

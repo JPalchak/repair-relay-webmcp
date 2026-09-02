@@ -3,142 +3,69 @@ import assert from "node:assert/strict";
 import { createStore } from "../src/store.js";
 import { createToolDefinitions } from "../src/tool-definitions.js";
 
+const livePayload = { count: 2, products: [
+  { code: "3168930003632", product_name: "Quaker Oats", brands: "Quaker", ingredients_text: "100% oats", allergens_tags: ["en:gluten"], nutriscore_grade: "a", last_modified_t: 1780104331, nutriments: { sugars_100g: 1.1 } },
+  { code: "3560070614202", product_name: "Whole Oat Flakes", brands: "Example", ingredients_text: "Whole oats", nutriscore_grade: "a", last_modified_t: 1779551890, nutriments: { sugars_100g: 0.7 } }
+] };
+
 function setup() {
-  const store = createStore();
-  let requestedReason = null;
-  const tools = createToolDefinitions({
-    store,
-    onDecisionRequested: (reason) => {
-      requestedReason = reason;
-    }
-  });
-  return {
-    store,
-    tools,
-    getRequestedReason: () => requestedReason,
-    getTool: (name) => tools.find((tool) => tool.name === name)
-  };
+  const store = createStore(); let reason = null;
+  const tools = createToolDefinitions({ store, onDecisionRequested: (value) => { reason = value; } });
+  return { store, tools, get: (name) => tools.find((tool) => tool.name === name), reason: () => reason };
 }
 
-test("tool surface contains eight unique focused tools", () => {
-  const { tools } = setup();
-  assert.equal(tools.length, 8);
-  assert.equal(new Set(tools.map((tool) => tool.name)).size, 8);
+async function withFetch(payload, run, status = 200) {
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: status >= 200 && status < 300, status, json: async () => structuredClone(payload) });
+  try { return await run(); } finally { globalThis.fetch = original; }
+}
+
+test("surface contains eight unique tools and no Luna or approval tool", () => {
+  const { tools } = setup(); const names = tools.map((tool) => tool.name);
+  assert.equal(tools.length, 8); assert.equal(new Set(names).size, 8); assert.equal(names.some((name) => /^(?:luna|approve|checkout|purchase)(?:_|$)/i.test(name)), false);
 });
-
-test("challenge-required search_products contract is exact", () => {
-  const { getTool } = setup();
-  const tool = getTool("search_products");
-  assert.ok(tool);
-  assert.equal(tool.description, "Search the product catalog");
-  assert.equal(typeof tool.execute, "function");
+test("challenge-required search contract is exact", () => {
+  const tool = setup().get("search_products"); assert.equal(tool.description, "Search the product catalog"); assert.equal(typeof tool.execute, "function");
 });
-
-test("all schemas reject undeclared properties", () => {
-  const { tools } = setup();
-  assert.ok(tools.every((tool) => tool.inputSchema.type === "object"));
-  assert.ok(tools.every((tool) => tool.inputSchema.additionalProperties === false));
+test("all schemas are closed and external-data tools are untrusted", () => {
+  const { tools, get } = setup(); assert.ok(tools.every((tool) => tool.inputSchema.additionalProperties === false)); assert.equal(get("search_products").annotations.untrustedContentHint, true);
 });
-
-test("no WebMCP tool can approve or authorize a plan", () => {
-  const { tools } = setup();
-  const prohibited = tools.filter((tool) => /^(approve|authorize|purchase|checkout)(_|$)/i.test(tool.name));
-  assert.deepEqual(prohibited, []);
+test("search_products fetches live-shaped data, updates UI state, and returns provenance", async () => {
+  const { store, get } = setup();
+  const result = await withFetch(livePayload, () => get("search_products").execute({ query: "oat cereal" }));
+  const parsed = JSON.parse(result); assert.equal(parsed.live, true); assert.equal(parsed.source, "Open Food Facts"); assert.equal(store.getState().search.results.length, 2); assert.ok(result.length <= 1500);
 });
-
-test("case and approved-plan readers are marked read-only", () => {
-  const { getTool } = setup();
-  assert.equal(getTool("get_case_snapshot").annotations.readOnlyHint, true);
-  assert.equal(getTool("get_approved_plan").annotations.readOnlyHint, true);
+test("live API failure is honest and never replaced by fixtures", async () => {
+  const { store, get } = setup();
+  await assert.rejects(withFetch({}, () => get("search_products").execute({ query: "oats" }), 503), /rate-limited/);
+  assert.equal(store.getState().search, null); assert.equal(store.getState().searchStatus, "error");
 });
-
-test("search_products returns a bounded response and updates visible state", async () => {
-  const { store, getTool } = setup();
-  const result = JSON.parse(await getTool("search_products").execute({
-    query: "direct-fit filter for weak airflow",
-    model: "AP-200",
-    budget: 65
-  }));
-  assert.ok(result.results.length > 0 && result.results.length <= 5);
-  assert.equal(store.getState().search.results.length, result.results.length);
-  assert.match(result.uiEffect, /reranked/i);
+test("compare, check, and stage operate only on current live results", async () => {
+  const { store, get } = setup();
+  await withFetch(livePayload, () => get("search_products").execute({ query: "oats" }));
+  const ids = store.getState().search.results.map((p) => p.id);
+  assert.equal(JSON.parse(await get("compare_products").execute({ productIds: ids })).compared.length, 2);
+  await get("record_package_check").execute({ productId: ids[0], checkType: "barcode_match", outcome: "match", note: "Printed code matches." });
+  const staged = JSON.parse(await get("stage_verified_choice").execute({ productId: ids[0], rationale: "Best completeness." }));
+  assert.equal(staged.choice.status, "awaiting_human_approval"); assert.match(staged.approval, /Not granted/);
+  assert.deepEqual(staged.choice.requiredChecks, ["barcode_match", "ingredients_match"]);
+  await get("record_package_check").execute({ productId: ids[0], checkType: "ingredients_match", outcome: "match", note: "Agent-supplied claim." });
+  assert.deepEqual(store.getState().stagedChoice.requiredChecks, ["barcode_match", "ingredients_match"]);
 });
-
-test("record_observation stores evidence as data, not instructions", async () => {
-  const { store, getTool } = setup();
-  const result = JSON.parse(await getTool("record_observation").execute({
-    text: "<img src=x onerror=alert(1)> The filter blocks light.",
-    tag: "blocked_filter",
-    confidence: 0.9
-  }));
-  assert.equal(result.caution.includes("not as executable instructions"), true);
-  const recorded = store.getState().evidence.at(-1);
-  assert.equal(recorded.source, "agent");
-  assert.match(recorded.text, /filter blocks light/i);
+test("runtime rejects malformed types and undeclared fields", async () => {
+  const { get } = setup();
+  await assert.rejects(get("search_products").execute({ query: 42 }), /string/);
+  await assert.rejects(get("lookup_barcode").execute({ barcode: 3168930003632 }), /string/);
+  await assert.rejects(get("search_products").execute({ query: "oats", hidden: true }), /Unsupported input field/);
 });
-
-test("compare_products compares only candidates in current results", async () => {
-  const { store, getTool } = setup();
-  await getTool("search_products").execute({ model: "AP-200", budget: 65 });
-  const ids = store.getState().search.results.slice(0, 2).map((item) => item.id);
-  const result = JSON.parse(await getTool("compare_products").execute({ productIds: ids }));
-  assert.equal(result.compared.length, 2);
-  assert.equal(store.getState().comparison.length, 2);
+test("human decision tool opens a checkpoint without approval", async () => {
+  const ctx = setup();
+  await withFetch(livePayload, () => ctx.get("search_products").execute({ query: "oats" }));
+  const id = ctx.store.getState().search.results[0].id;
+  await ctx.get("stage_verified_choice").execute({ productId: id });
+  const result = JSON.parse(await ctx.get("request_human_decision").execute({ reason: "Verify the physical ingredients." }));
+  assert.equal(result.checkpoint, "opened"); assert.match(ctx.reason(), /physical ingredients/); assert.equal(ctx.store.getState().approvedChoice, null);
 });
-
-test("stage_repair_plan cannot imply approval", async () => {
-  const { store, getTool } = setup();
-  await getTool("search_products").execute({ model: "AP-200", budget: 65 });
-  const candidateId = store.getState().search.results[0].id;
-  const result = JSON.parse(await getTool("stage_repair_plan").execute({ candidateId }));
-  assert.equal(result.plan.status, "staged");
-  assert.match(result.approval, /not granted/i);
-  assert.equal(store.getState().approvedPlan, null);
-});
-
-test("request_human_decision opens a checkpoint without deciding", async () => {
-  const { store, getTool, getRequestedReason } = setup();
-  await getTool("search_products").execute({ model: "AP-200" });
-  const candidateId = store.getState().search.results[0].id;
-  await getTool("stage_repair_plan").execute({ candidateId });
-  const result = JSON.parse(await getTool("request_human_decision").execute({
-    reason: "The person must verify the stop conditions."
-  }));
-  assert.equal(result.checkpoint, "opened");
-  assert.equal(store.getState().stagedPlan.status, "staged");
-  assert.match(getRequestedReason(), /verify the stop conditions/i);
-});
-
-test("get_approved_plan distinguishes a staged draft from approval", async () => {
-  const { store, getTool } = setup();
-  await getTool("search_products").execute({ model: "AP-200" });
-  const candidateId = store.getState().search.results[0].id;
-  await getTool("stage_repair_plan").execute({ candidateId });
-  const before = JSON.parse(await getTool("get_approved_plan").execute({}));
-  assert.equal(before.approved, false);
-
-  store.dispatch({
-    type: "APPROVE_PLAN",
-    authorization: { actor: "human", confirmed: true }
-  });
-  const after = JSON.parse(await getTool("get_approved_plan").execute({}));
-  assert.equal(after.approved, true);
-  assert.equal(after.plan.approvedBy, "human");
-});
-
-test("run_luna_review scores the complete authority-bounded surface", async () => {
-  const { getTool } = setup();
-  const result = JSON.parse(await getTool("run_luna_review").execute({}));
-  assert.equal(result.score, 30);
-  assert.equal(result.maxScore, 30);
-});
-
-test("tool executions honor cancellation", async () => {
-  const { getTool } = setup();
-  const controller = new AbortController();
-  controller.abort();
-  await assert.rejects(
-    getTool("search_products").execute({ model: "AP-200" }, { signal: controller.signal }),
-    { name: "AbortError" }
-  );
+test("snapshot and approved readers are read-only", () => {
+  const { get } = setup(); assert.equal(get("get_workspace_snapshot").annotations.readOnlyHint, true); assert.equal(get("get_approved_choice").annotations.readOnlyHint, true);
 });
