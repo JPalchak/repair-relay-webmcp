@@ -1,0 +1,45 @@
+name: Repair Relay Luna Review
+
+on:
+  push:
+    paths:
+      - "**"
+      - ".github/workflows/repair-relay-luna.yml"
+  pull_request:
+    paths:
+      - "**"
+      - ".github/workflows/repair-relay-luna.yml"
+  schedule:
+    - cron: "17 */12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  luna:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts
+      - name: Run Luna adversarial review
+        run: npm run luna
+      - name: Publish Luna report as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: repair-relay-luna-${{ github.run_number }}
+          path: |
+            reports/luna-latest.md
+            reports/luna-latest.json
+      - name: Publish Luna suggestions to the run summary
+        if: always()
+        run: |
+          if [ -f reports/luna-latest.md ]; then
+            cat reports/luna-latest.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Luna did not produce a report." >> "$GITHUB_STEP_SUMMARY"
+          fi

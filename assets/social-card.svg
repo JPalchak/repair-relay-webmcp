@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f4f1e8"/>
+  <rect x="52" y="52" width="1096" height="526" rx="42" fill="#132521"/>
+  <circle cx="1015" cy="145" r="84" fill="#d4e157"/>
+  <path d="M896 460c45-111 104-166 176-166" fill="none" stroke="#f4f1e8" stroke-width="34" stroke-linecap="round"/>
+  <path d="M896 507h87c70 0 112-39 137-119" fill="none" stroke="#e56b46" stroke-width="34" stroke-linecap="round"/>
+  <text x="112" y="150" fill="#d4e157" font-size="28" font-family="Arial, sans-serif" letter-spacing="3">HUMAN + AGENT REPAIR BENCH</text>
+  <text x="112" y="270" fill="#f4f1e8" font-size="76" font-weight="700" font-family="Arial, sans-serif">Repair Relay</text>
+  <text x="112" y="360" fill="#f4f1e8" font-size="36" font-family="Arial, sans-serif">The human is the sensor.</text>
+  <text x="112" y="410" fill="#f4f1e8" font-size="36" font-family="Arial, sans-serif">The agent is the systems thinker.</text>
+  <text x="112" y="500" fill="#b8c6c1" font-size="26" font-family="Arial, sans-serif">Shared state · evidence-sensitive ranking · human-only approval</text>
+</svg>

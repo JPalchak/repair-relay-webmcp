@@ -1,0 +1,17 @@
+{
+  "name": "Repair Relay",
+  "short_name": "Repair Relay",
+  "description": "A shared repair bench for people and browser agents.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f1e8",
+  "theme_color": "#132521",
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

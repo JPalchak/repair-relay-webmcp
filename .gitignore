@@ -1,0 +1,9 @@
+node_modules/
+dist/
+playwright-report/
+test-results/
+artifacts/
+reports/*.png
+reports/*.webm
+reports/*.mp4
+.DS_Store

@@ -1,0 +1,47 @@
+name: Repair Relay CI
+
+on:
+  push:
+    paths:
+      - "**"
+      - ".github/workflows/repair-relay-ci.yml"
+  pull_request:
+    paths:
+      - "**"
+      - ".github/workflows/repair-relay-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts
+      - run: npm run check
+      - run: npm run verify:repo
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts
+      - run: npm install --no-save playwright
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: repair-relay-browser-smoke
+          path: reports/browser-smoke.png
+          if-no-files-found: ignore
