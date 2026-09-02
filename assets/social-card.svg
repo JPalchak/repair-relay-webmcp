@@ -1,13 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <rect width="1200" height="630" fill="#f3f1e8"/>
-  <path d="M0 0h1200v18H0z" fill="#2058f5"/>
-  <rect x="62" y="62" width="1076" height="506" rx="32" fill="#171713"/>
-  <text x="112" y="145" fill="#d7ff43" font-size="27" font-family="monospace" letter-spacing="3">LIVE CATALOG × PHYSICAL REALITY</text>
-  <text x="112" y="270" fill="#fffef8" font-size="84" font-weight="700" font-family="Arial, sans-serif">Label Relay</text>
-  <text x="112" y="355" fill="#fffef8" font-size="36" font-family="Arial, sans-serif">Agents search what the world knows.</text>
-  <text x="112" y="405" fill="#fffef8" font-size="36" font-family="Arial, sans-serif">People verify what is in their hands.</text>
-  <text x="112" y="500" fill="#aead9f" font-size="25" font-family="Arial, sans-serif">Open Food Facts · WebMCP · human-only approval</text>
-  <rect x="895" y="120" width="176" height="235" fill="#fffef8" stroke="#d7ff43" stroke-width="12"/>
-  <path d="M930 160v150m24-150v150m38-150v150m20-150v150" stroke="#171713" stroke-width="12"/>
-  <circle cx="1035" cy="410" r="62" fill="#2058f5"/><path d="m1007 410 20 21 38-47" fill="none" stroke="white" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="Recall Relay social card">
+  <rect width="1200" height="630" fill="#f5f2ea"/>
+  <rect x="60" y="60" width="1080" height="510" rx="28" fill="#fffdf7" stroke="#1b1a17" stroke-width="4"/>
+  <text x="110" y="150" font-family="Consolas, monospace" font-size="24" font-weight="800" fill="#1f4fd6" letter-spacing="4">RECALL RELAY · WEBMCP</text>
+  <text x="110" y="250" font-family="Inter, Arial, sans-serif" font-size="66" font-weight="800" fill="#1b1a17" letter-spacing="-2">The recall notice knows the lot code.</text>
+  <text x="110" y="330" font-family="Inter, Arial, sans-serif" font-size="66" font-weight="800" fill="#c8321e" letter-spacing="-2">Only you can see the lid.</text>
+  <text x="110" y="410" font-family="Inter, Arial, sans-serif" font-size="28" fill="#6b675d">Agents sweep live FDA + CPSC notices for what is on your shelf.</text>
+  <text x="110" y="450" font-family="Inter, Arial, sans-serif" font-size="28" fill="#6b675d">People read the package. The agent matches. You decide.</text>
+  <rect x="110" y="490" width="300" height="46" rx="10" fill="#1b1a17"/>
+  <text x="130" y="521" font-family="Consolas, monospace" font-size="22" fill="#d7ff43">10 tools · live data</text>
 </svg>

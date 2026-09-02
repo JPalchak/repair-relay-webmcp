@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Label Relay pairs live Open Food Facts records with human verification of the physical package through WebMCP.">
-  <meta name="theme-color" content="#171713">
-  <meta property="og:title" content="Label Relay — Live Product Truth, Human Verified">
-  <meta property="og:description" content="Agents search the live catalog. People verify the package. Neither works alone.">
+  <meta name="description" content="Recall Relay: your agent sweeps live FDA and CPSC recall data for what is on your shelf; you read the lot codes only a person can see.">
+  <meta name="theme-color" content="#1b1a17">
+  <meta property="og:title" content="Recall Relay — Agents sweep the notices. People read the lids.">
+  <meta property="og:description" content="A WebMCP workspace where an agent checks live recall databases against your shelf and you verify lot codes on the physical package.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="assets/social-card.svg">
-  <title>Label Relay — Live Product Truth, Human Verified</title>
+  <title>Recall Relay — Agents sweep the notices. People read the lids.</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
@@ -17,107 +17,100 @@
 <body>
   <a class="skip-link" href="#workspace">Skip to workspace</a>
   <header class="site-header">
-    <a class="brand" href="#" aria-label="Label Relay home"><img src="assets/icon.svg" alt="" width="38" height="38"><span>LABEL RELAY</span></a>
+    <a class="brand" href="#" aria-label="Recall Relay home"><img src="assets/icon.svg" alt="" width="36" height="36"><span>RECALL RELAY</span></a>
     <div class="header-actions"><span id="webmcp-status" class="status-pill status-neutral">Detecting WebMCP</span><button id="reset-button" class="button button-quiet" type="button">Reset</button></div>
   </header>
 
   <main id="workspace">
     <section class="hero">
       <div>
-        <p class="eyebrow">Live catalog × physical reality</p>
-        <h1>The database knows millions.<br><em>You know this package.</em></h1>
-        <p class="hero-copy">Label Relay lets an agent search and compare current Open Food Facts records while you verify what only a person holding the package can know. Every recommendation stays provisional until the physical barcode and ingredients agree.</p>
+        <p class="eyebrow">Live recall data × the package in your hand</p>
+        <h1>The recall notice knows the lot code.<br><em>Only you can see the lid.</em></h1>
+        <p class="hero-copy">Recall Relay is a shared shelf. Your agent sweeps live FDA and CPSC recall notices for everything on it and turns dense lot-code text into “look here” instructions. You read what is actually printed on the package. The agent matches, you decide.</p>
+        <ul class="hero-facts">
+          <li><strong>Live sources</strong> openFDA food &amp; drug enforcement reports, CPSC recalls, Open Food Facts</li>
+          <li><strong>Human-only</strong> what is on the shelf, what the package says, keep or discard</li>
+          <li><strong>No fixtures</strong> every result carries its source, query, and fetch time</li>
+        </ul>
       </div>
       <aside class="agent-card" aria-label="Suggested WebMCP prompt">
         <div class="agent-card-head"><span class="pulse" aria-hidden="true"></span><strong>TRY WITH A WEBMCP AGENT</strong></div>
-        <p id="suggested-prompt">Search the live catalog for oat cereal, compare the most complete records, then stage one choice and tell me exactly what to verify on the package.</p>
+        <p id="suggested-prompt">Add the sample shelf items, sweep them for recalls, read the full notice for anything that matches, and tell me exactly where on each package to look and what lot codes to compare.</p>
         <button id="copy-prompt-button" class="button button-accent" type="button">Copy prompt</button>
+        <p class="small muted">Works in ChatGPT’s in-app browser or Chrome with <code>chrome://flags/#enable-webmcp-testing</code>.</p>
       </aside>
     </section>
 
     <section class="proof-strip" aria-label="Collaboration sequence">
-      <div><b>01</b><span><strong>Agent searches live</strong><small>Current external records</small></span></div>
-      <div><b>02</b><span><strong>Person checks package</strong><small>Barcode + ingredients</small></span></div>
-      <div><b>03</b><span><strong>Shared state updates</strong><small>Visible to both</small></span></div>
-      <div><b>04</b><span><strong>Person decides</strong><small>Human-only approval</small></span></div>
+      <div><b>01</b><span><strong>You name what is on the shelf</strong><small>Barcode, catalog, or plain words</small></span></div>
+      <div><b>02</b><span><strong>Agent sweeps live notices</strong><small>FDA + CPSC, every item</small></span></div>
+      <div><b>03</b><span><strong>You read the package</strong><small>Lot code, best-by, UPC, model</small></span></div>
+      <div><b>04</b><span><strong>Agent matches, you decide</strong><small>Keep, discard, return</small></span></div>
     </section>
 
-    <section class="search-deck" aria-labelledby="search-heading">
-      <div class="search-intro">
-        <p class="section-kicker">Open Food Facts · live production API</p>
-        <h2 id="search-heading">Search what is actually out there</h2>
-        <p id="source-line">Every result will show its source and fetch time. No fixture fallback exists.</p>
-      </div>
-      <form id="search-form" class="search-form">
-        <label for="search-query">Product, brand, or food phrase</label>
-        <div><input id="search-query" name="query" value="oat cereal" minlength="2" maxlength="80" required><button class="button button-primary" type="submit">Search live data</button></div>
-      </form>
-      <div class="or-divider">or</div>
-      <form id="barcode-form" class="barcode-form">
-        <label for="barcode-input">Barcode on the package</label>
-        <div><input id="barcode-input" name="barcode" inputmode="numeric" placeholder="e.g. 3168930003632" minlength="8" maxlength="20" required><button class="button button-quiet" type="submit">Look up</button></div>
-      </form>
-      <span id="search-status" class="status-pill status-neutral">No search yet</span>
-    </section>
-    <p id="search-error" class="error-banner" role="alert" hidden></p>
+    <p id="ask-banner" class="ask-banner" role="status" hidden></p>
 
     <div class="workspace-grid">
-      <section class="panel results-panel" aria-labelledby="results-heading">
-        <div class="panel-heading"><div><p class="section-kicker">Agent-scale view</p><h2 id="results-heading">Live records</h2></div><span class="source-badge">OPEN DATA</span></div>
-        <div id="result-empty" class="empty-state"><strong>No live records yet</strong><p>Run a search above. If the external service is unavailable, Label Relay shows the error and never substitutes dummy data.</p></div>
-        <ol id="product-list" class="product-list" aria-live="polite"></ol>
-        <section id="comparison-panel" class="comparison-panel" hidden>
-          <div class="subheading"><h3>Side-by-side evidence</h3><button id="clear-comparison-button" class="text-button" type="button">Clear</button></div>
-          <div id="comparison-wrap" class="table-wrap"></div>
-        </section>
+      <section class="panel intake-panel" aria-labelledby="intake-heading">
+        <div class="panel-heading"><div><p class="section-kicker">Step 1 · What is in the home</p><h2 id="intake-heading">Put items on the shelf</h2></div><span id="catalog-status" class="status-pill status-neutral">No search yet</span></div>
+        <form id="search-form" class="stack-form">
+          <label for="search-query">Find it in the live food catalog</label>
+          <div class="input-row"><input id="search-query" name="query" placeholder="peanut butter, oat cereal, brand name" minlength="2" maxlength="80" required><button class="button button-primary" type="submit">Search</button></div>
+        </form>
+        <form id="barcode-form" class="stack-form">
+          <label for="barcode-input">Or type the barcode on the package</label>
+          <div class="input-row"><input id="barcode-input" name="barcode" inputmode="numeric" placeholder="e.g. 0051500241219" minlength="8" maxlength="20" required><button class="button button-quiet" type="submit">Look up</button></div>
+        </form>
+        <p id="catalog-source" class="small muted">Live Open Food Facts records; no fixture fallback.</p>
+        <p id="catalog-error" class="error-banner" role="alert" hidden></p>
+        <div id="catalog-empty" class="empty-state compact"><strong>No catalog results yet</strong><p>Search or scan, then press “Add to shelf”. The agent can do this too through <code>search_products</code>.</p></div>
+        <ol id="catalog-list" class="catalog-list" aria-live="polite"></ol>
+        <form id="manual-form" class="stack-form manual-form">
+          <label for="manual-description">Or describe it in your own words</label>
+          <input id="manual-description" placeholder="Play yard mattress, kids’ ibuprofen, space heater…" maxlength="120" required>
+          <div class="input-row">
+            <input id="manual-brand" placeholder="Brand (optional)" maxlength="80" aria-label="Brand">
+            <select id="manual-kind" aria-label="Kind"><option value="food">Food</option><option value="drug">Medicine</option><option value="consumer">Household</option></select>
+            <button class="button button-quiet" type="submit">Add</button>
+          </div>
+        </form>
+        <button id="sample-shelf-button" class="text-button" type="button">Add a three-item sample shelf</button>
+      </section>
+
+      <section class="panel shelf-panel" aria-labelledby="shelf-heading">
+        <div class="panel-heading"><div><p class="section-kicker">Steps 2–4 · Shared state</p><h2 id="shelf-heading">The shelf <span id="shelf-count" class="count-badge">0</span></h2></div>
+          <div class="sweep-controls"><button id="sweep-button" class="button button-primary" type="button" disabled>Sweep shelf for recalls</button><span id="sweep-status" class="small muted">No sweep yet.</span></div>
+        </div>
+        <div id="shelf-empty" class="empty-state"><strong>The shelf is empty</strong><p>Add items on the left, or ask your agent. Then sweep. Each card will show live recall candidates, what your agent asks you to read, its assessment, and your decision.</p></div>
+        <ol id="shelf-list" class="shelf-list" aria-live="polite"></ol>
       </section>
 
       <aside class="rail">
-        <section class="panel human-panel" aria-labelledby="human-heading">
-          <div class="panel-heading"><div><p class="section-kicker">Human-only evidence</p><h2 id="human-heading">Check the package</h2></div><span id="check-count" class="count-badge">0</span></div>
-          <p class="panel-copy">The database can be stale or incomplete. Record what the physical label says; agent-supplied text is treated as untrusted evidence.</p>
-          <form id="check-form" class="check-form">
-            <label>Live result<select id="check-product" required><option value="">Choose a live result…</option></select></label>
-            <div class="form-row">
-              <label>Check<select id="check-type"><option value="barcode_match">Barcode match</option><option value="ingredients_match">Ingredients match</option><option value="allergens_match">Allergens match</option><option value="package_date">Package date</option><option value="available_here">Available here</option></select></label>
-              <label>Outcome<select id="check-outcome"><option value="match">Match</option><option value="mismatch">Mismatch</option><option value="unclear">Unclear</option></select></label>
-            </div>
-            <label>What you observed<textarea id="check-note" rows="2" maxlength="240" placeholder="The printed barcode and first ingredients match." required></textarea></label>
-            <button class="button button-primary" type="submit">Record physical check</button>
-          </form>
-          <ol id="check-list" class="check-list" aria-live="polite"></ol>
+        <section class="panel" aria-labelledby="sources-heading">
+          <div class="panel-heading"><div><p class="section-kicker">Live sources</p><h2 id="sources-heading">Where notices come from</h2></div></div>
+          <ul id="source-list" class="source-list"></ul>
+          <p class="small muted">openFDA: “Do not rely on openFDA to make decisions regarding medical care; assume all results are unvalidated.” Recall Relay shows the notice, the query, and the time. It never decides for you.</p>
         </section>
-
-        <section id="choice-panel" class="panel choice-panel" aria-labelledby="choice-heading">
-          <div class="panel-heading"><div><p class="section-kicker">Decision boundary</p><h2 id="choice-heading">Staged choice</h2></div><span id="choice-status" class="status-pill status-neutral">Nothing staged</span></div>
-          <div id="choice-empty" class="empty-state compact"><strong>Stage a live result</strong><p>An agent may propose. It cannot approve.</p></div>
-          <article id="choice-card" hidden>
-            <h3 id="choice-title"></h3><p id="choice-brand" class="product-brand"></p><p id="choice-rationale"></p>
-            <ul id="required-checks" class="required-checks"></ul>
-            <div class="approval-gate">
-              <label class="consent"><input id="approval-checkbox" type="checkbox"><span>I compared this record with the physical package and accept the remaining uncertainty.</span></label>
-              <button id="approve-button" class="button button-approve" type="button" disabled>Approve this verified choice</button>
-              <p id="approval-note">No WebMCP tool can approve.</p>
-            </div>
-          </article>
+        <section class="panel" aria-labelledby="log-heading">
+          <div class="panel-heading"><div><p class="section-kicker">Shared history</p><h2 id="log-heading">Relay log</h2></div></div>
+          <ol id="activity-log" class="activity-log"></ol>
+        </section>
+        <section class="panel" aria-labelledby="tools-heading">
+          <div class="panel-heading"><div><p class="section-kicker">Native WebMCP</p><h2 id="tools-heading">Ten narrow tools</h2></div></div>
+          <p class="small muted">Each call updates this page. External notices and relayed readings are marked untrusted. There is no tool to resolve an item.</p>
+          <div id="tool-list" class="tool-list"></div>
         </section>
       </aside>
     </div>
 
-    <section class="inspect-grid">
-      <div class="panel activity-panel"><div class="panel-heading"><div><p class="section-kicker">Shared state</p><h2>Relay log</h2></div><span class="source-badge">VISIBLE</span></div><ol id="activity-log" class="activity-log"></ol></div>
-      <div class="panel tools-panel"><div><p class="section-kicker">Native WebMCP</p><h2>Eight narrow tools</h2><p>Calls update the same interface the person sees. Live external content is marked untrusted; approval is absent by design.</p></div><div id="tool-list" class="tool-list"></div></div>
-    </section>
-
     <footer>
-      <p>Data: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer">Open Food Facts</a> under ODbL. Product images are available under CC BY-SA; packaging may include third-party rights. Records are community-contributed and may be inaccurate or incomplete—always verify the physical label.</p>
-      <p><a href="https://github.com/JPalchak/repair-relay-webmcp" target="_blank" rel="noopener noreferrer">Source code</a> · MIT licensed · No purchases, medical decisions, or background tracking</p>
+      <p>Data: <a href="https://open.fda.gov/" target="_blank" rel="noopener noreferrer">openFDA</a> enforcement reports (public domain, unvalidated), <a href="https://www.cpsc.gov/Recalls" target="_blank" rel="noopener noreferrer">CPSC</a> recalls, and <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer">Open Food Facts</a> under ODbL. Recall Relay is an information prototype, not safety, legal, or medical advice. Follow the official notice and the firm’s remedy.</p>
+      <p><a href="https://github.com/JPalchak/repair-relay-webmcp" target="_blank" rel="noopener noreferrer">Source code</a> · MIT licensed · No accounts, purchases, or background tracking</p>
     </footer>
   </main>
 
-  <dialog id="decision-dialog" class="decision-dialog"><form method="dialog"><button class="dialog-close" value="cancel" aria-label="Close">×</button><p class="section-kicker">Human checkpoint</p><h2>Reality check required</h2><p id="decision-reason"></p><div id="decision-summary" class="dialog-summary"></div><button class="button button-primary" value="review">Review in the workspace</button></form></dialog>
   <div id="toast-region" class="toast-region" aria-live="polite"></div>
-  <noscript><div class="error-banner">Label Relay requires JavaScript for live data and WebMCP.</div></noscript>
+  <noscript><div class="error-banner">Recall Relay requires JavaScript for live data and WebMCP.</div></noscript>
   <script type="module" src="src/app.js"></script>
 </body>
 </html>

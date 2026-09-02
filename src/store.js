@@ -1,16 +1,13 @@
-import { approveChoice } from "./engine.js";
+import { attachCandidates, createResolution } from "./engine.js";
 
 export function createInitialState() {
   return {
-    search: null,
-    searchStatus: "idle",
-    searchError: "",
-    checks: [],
-    comparison: [],
-    stagedChoice: null,
-    approvedChoice: null,
-    decisionRequest: null,
-    activity: [{ id: "start", actor: "system", action: "Workspace opened", detail: "Ready for a live catalog search.", at: new Date().toISOString() }]
+    catalog: { status: "idle", error: "", search: null },
+    shelf: [],
+    sweep: { status: "idle", message: "", at: null },
+    recallMeta: {},
+    highlightItemId: null,
+    activity: [{ id: "start", actor: "system", action: "Workspace opened", detail: "Add what is on your shelf, then sweep live recall sources.", at: new Date().toISOString() }]
   };
 }
 
@@ -18,53 +15,72 @@ function log(actor, action, detail) {
   return { id: `activity-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, actor, action, detail, at: new Date().toISOString() };
 }
 
+function withLog(state, actor, action, detail) {
+  return { ...state, activity: [log(actor, action, detail), ...state.activity].slice(0, 30) };
+}
+
+function updateItem(state, itemId, updater) {
+  if (!state.shelf.some((item) => item.id === itemId)) throw new Error("That item is not on the shelf.");
+  return { ...state, shelf: state.shelf.map((item) => (item.id === itemId ? updater(item) : item)) };
+}
+
+function mergeMeta(state, search) {
+  const recallMeta = { ...state.recallMeta };
+  for (const entry of search.sources) {
+    recallMeta[entry.source] = { status: entry.status, lastUpdated: entry.lastUpdated ?? recallMeta[entry.source]?.lastUpdated ?? null, checkedAt: search.fetchedAt, message: entry.message };
+  }
+  return recallMeta;
+}
+
 export function reducer(state, event) {
   switch (event.type) {
-    case "SEARCH_STARTED":
-      return { ...state, searchStatus: "loading", searchError: "" };
-    case "SEARCH_SUCCEEDED":
-      return {
-        ...state,
-        search: event.search,
-        searchStatus: "ready",
-        searchError: "",
-        comparison: [],
-        stagedChoice: null,
-        approvedChoice: null,
-        activity: [log(event.actor, "Live catalog loaded", `${event.search.results.length} records for “${event.search.query}” from ${event.search.source}.`), ...state.activity].slice(0, 20)
-      };
-    case "SEARCH_FAILED":
-      return {
-        ...state,
-        searchStatus: "error",
-        searchError: event.message,
-        activity: [log(event.actor, "Live search failed", event.message), ...state.activity].slice(0, 20)
-      };
-    case "ADD_CHECK": {
-      const remaining = state.stagedChoice?.productId === event.check.productId && event.check.outcome === "match" && event.check.source === "human"
-        ? state.stagedChoice.requiredChecks.filter((type) => type !== event.check.checkType)
-        : state.stagedChoice?.requiredChecks;
-      return {
-        ...state,
-        checks: [...state.checks, event.check].slice(-20),
-        stagedChoice: state.stagedChoice ? { ...state.stagedChoice, requiredChecks: remaining ?? state.stagedChoice.requiredChecks } : null,
-        activity: [log(event.actor, "Package check recorded", `${event.check.checkType}: ${event.check.outcome}.`), ...state.activity].slice(0, 20)
-      };
+    case "CATALOG_STARTED":
+      return { ...state, catalog: { ...state.catalog, status: "loading", error: "" } };
+    case "CATALOG_SUCCEEDED":
+      return withLog({ ...state, catalog: { status: "ready", error: "", search: event.search } }, event.actor, "Catalog searched", `${event.search.results.length} live records for “${event.search.query}” from ${event.search.source}.`);
+    case "CATALOG_FAILED":
+      return withLog({ ...state, catalog: { ...state.catalog, status: "error", error: event.message } }, event.actor, "Catalog search failed", event.message);
+    case "ADD_ITEM": {
+      if (state.shelf.length >= 12) throw new Error("The shelf holds at most 12 items per session. Resolve or remove one first.");
+      return withLog({ ...state, shelf: [...state.shelf, event.item], highlightItemId: event.item.id }, event.actor, "Item added to shelf", `${event.item.name} (${event.item.kind}).`);
     }
-    case "SET_COMPARISON":
-      return { ...state, comparison: event.comparison, activity: [log(event.actor, "Products compared", event.comparison.map((p) => p.name).join(" vs ")), ...state.activity].slice(0, 20) };
-    case "CLEAR_COMPARISON":
-      return { ...state, comparison: [] };
-    case "STAGE_CHOICE":
-      return { ...state, stagedChoice: event.choice, approvedChoice: null, activity: [log(event.actor, "Choice staged", `${event.choice.name} — not approved.`), ...state.activity].slice(0, 20) };
-    case "REQUEST_DECISION":
-      return { ...state, decisionRequest: { reason: event.reason, actor: event.actor, at: new Date().toISOString() }, activity: [log(event.actor, "Human decision requested", event.reason), ...state.activity].slice(0, 20) };
-    case "CLEAR_DECISION_REQUEST":
-      return { ...state, decisionRequest: null };
-    case "APPROVE_CHOICE": {
-      const approved = approveChoice(state.stagedChoice, event.authorization);
-      return { ...state, stagedChoice: approved, approvedChoice: approved, decisionRequest: null, activity: [log("human", "Choice approved", `${approved.name}; visible physical-label checks completed.`), ...state.activity].slice(0, 20) };
+    case "REMOVE_ITEM": {
+      const item = state.shelf.find((entry) => entry.id === event.itemId);
+      if (!item) return state;
+      return withLog({ ...state, shelf: state.shelf.filter((entry) => entry.id !== event.itemId) }, "human", "Item removed", item.name);
     }
+    case "ATTACH_CANDIDATES": {
+      const next = updateItem(state, event.itemId, (item) => attachCandidates(item, event.search));
+      const item = next.shelf.find((entry) => entry.id === event.itemId);
+      const upc = item.candidates.filter((candidate) => candidate.upcMatch).length;
+      return withLog({ ...next, recallMeta: mergeMeta(state, event.search) }, event.actor, "Recall sources searched", `“${event.search.query}” → ${event.search.results.length} candidate(s) for ${item.name}${upc ? `; ${upc} contain this barcode` : ""}.`);
+    }
+    case "RECALL_SEARCHED":
+      return withLog({ ...state, recallMeta: mergeMeta(state, event.search) }, event.actor, "Recall sources searched", `“${event.search.query}” → ${event.search.results.length} candidate(s), not attached to an item.`);
+    case "SWEEP_STARTED":
+      return { ...state, sweep: { status: "running", message: event.message ?? "Sweeping live recall sources…", at: state.sweep.at } };
+    case "SWEEP_FINISHED":
+      return withLog({ ...state, sweep: { status: event.failed ? "error" : "done", message: event.message, at: new Date().toISOString() } }, event.actor, "Shelf sweep finished", event.message);
+    case "REQUEST_READING": {
+      const next = updateItem(state, event.itemId, (item) => ({ ...item, readingRequests: [...item.readingRequests, event.request].slice(-6) }));
+      return withLog({ ...next, highlightItemId: event.itemId }, event.actor, "Package reading requested", `${event.request.fields.join(", ")} — ${event.request.whereToLook}`);
+    }
+    case "ADD_READING": {
+      const next = updateItem(state, event.itemId, (item) => ({ ...item, readings: [...item.readings, event.reading].slice(-12) }));
+      return withLog(next, event.reading.source === "human" ? "human" : "agent", "Package reading recorded", `${event.reading.field}: ${event.reading.value}${event.reading.source === "agent_relayed" ? " (relayed by agent)" : ""}`);
+    }
+    case "SET_ASSESSMENT": {
+      const next = updateItem(state, event.itemId, (item) => ({ ...item, assessment: event.assessment }));
+      return withLog({ ...next, highlightItemId: event.itemId }, event.actor, "Agent assessment posted", `${event.assessment.verdict.replaceAll("_", " ")} — awaiting the person's decision.`);
+    }
+    case "RESOLVE_ITEM": {
+      const resolution = createResolution({ action: event.action, note: event.note }, event.authorization);
+      const next = updateItem(state, event.itemId, (item) => ({ ...item, resolution }));
+      const item = next.shelf.find((entry) => entry.id === event.itemId);
+      return withLog(next, "human", "Item resolved by person", `${item.name}: ${resolution.action.replace("_", " ")}.`);
+    }
+    case "CLEAR_HIGHLIGHT":
+      return { ...state, highlightItemId: null };
     case "RESET":
       return createInitialState();
     default:

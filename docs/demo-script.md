@@ -1,35 +1,39 @@
 # Judge demo script (about 2:30)
 
-## 0:00–0:25 — The asymmetry
+## 0:00–0:20 — The asymmetry
 
-Show the hero and live search timestamp.
+Show the hero.
 
-“Open product data knows millions of products, but it cannot know whether this record matches the package in my hand. An agent can search and compare at scale. I can verify the physical barcode and current ingredients. Label Relay is the structured handoff between those capabilities.”
+“Recall notices publish exact lot ranges. Almost nobody checks, because it means reading a database and then reading a lid. An agent will happily do the first. Only I can do the second. Recall Relay puts both on one page.”
 
-## 0:25–0:55 — Prove live data
+## 0:20–0:50 — Shelf and sweep
 
-Search `quaker oats` or enter barcode `3168930003632`.
+Click **Add a three-item sample shelf**, then ask the agent to sweep (or press **Sweep shelf**).
 
-“This is a production Open Food Facts request, not a bundled catalog. Every card links to its source and shows fetch time, upstream freshness, completeness, and missing data. If the API fails, the app shows the failure—there is no fake fallback.”
+“Three live sources: openFDA food, openFDA drug, CPSC. Each card shows the query, per-source status, and fetch time. If a source fails, the card says so. Nothing here is a fixture.”
 
-## 0:55–1:25 — Prove WebMCP
+Expand a candidate to show the code text block.
 
-Open the WebMCP inspector and show the eight tools. Invoke `search_products`, then `compare_products`.
+## 0:50–1:25 — The agent asks me to read the package
 
-“The agent is not scraping cards. It calls typed tools. Those callbacks update the same state and page I see. External data is marked untrusted and outputs are bounded.”
+Ask: “Read the full notice for the peanut butter and tell me exactly what to look for.”
 
-## 1:25–1:55 — Human physical evidence
+The agent calls `get_recall_details`, then `request_package_reading`. Show the highlighted card, the banner, and the prefilled form.
 
-Stage a result. Record barcode and ingredients checks.
+“That is the tool that makes this collaborative: the agent hands me a physical task with where-to-look text derived from the notice.”
 
-“The agent may stage and explain, but two facts must come from reality. These checks remove the corresponding blockers. A mismatch would stay visible instead of being reasoned away.”
+## 1:25–1:55 — Evidence before verdict
 
-## 1:55–2:20 — Authority boundary
+Ask the agent to assess the item before typing anything. Show the rejection.
 
-Invoke `request_human_decision`. Show that no approval tool exists. Check the visible consent box and click approve.
+“The page refuses a match verdict without a reading.” Type a lot code. Ask again. Show the assessment with reasoning on the card.
 
-“Approval requires my trusted click. Only afterward can `get_approved_choice` return an approved result.”
+## 1:55–2:20 — Human-only decision
+
+Show the tool list: no resolve tool. Click **Discard**. Ask the agent to call `get_shelf`.
+
+“My decision is now agent-readable, so the conversation can continue, but only a trusted click could record it.”
 
 ## 2:20–2:30 — Close
 
-“Label Relay becomes meaningfully better when agent-scale search and human-scale truth use the same WebMCP workspace.”
+“Recall Relay is better together because the agent does the part people never do, and the person does the part agents cannot.”

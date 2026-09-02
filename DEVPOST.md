@@ -2,11 +2,11 @@
 
 ## Title
 
-Label Relay
+Recall Relay
 
 ## Tagline
 
-Agents search what the world knows. People verify what is in their hands.
+Agents sweep the recall notices. People read the lids.
 
 ## URLs
 
@@ -15,23 +15,27 @@ Agents search what the world knows. People verify what is in their hands.
 
 ## Inspiration
 
-Product databases are valuable precisely because no person can search millions of records unaided. They are risky to treat as ground truth because community records can be stale, incomplete, or tied to a different package revision. The missing piece is not another catalog chatbot. It is a structured relay between agent-scale search and human physical verification.
+Every agent demo helps you buy something. Nothing helps you with what you already own. Recalls are the clearest example: the FDA publishes enforcement reports with exact lot ranges, the CPSC publishes model numbers and sale dates, and almost nobody checks, because matching a notice to a jar means reading a database and then reading a lid. A chat assistant can do the first half. Only a person can do the second. WebMCP lets them do it on the same page.
 
 ## What it does
 
-Label Relay searches live Open Food Facts production data, exposes provenance and freshness, compares incomplete records, and lets an agent stage a candidate. The person holding the package verifies the barcode and ingredients. Only then can the visible human-only approval control be used. The approved choice becomes readable to the agent for continued assistance.
+Recall Relay is a shared shelf. You add what is in your home by catalog search, barcode, or plain words. Your agent sweeps every item across live openFDA food and drug enforcement reports and CPSC recalls, attaches candidate notices to each card, and flags any notice whose text contains the item’s barcode digits. It opens the full notice, then asks you to read specific fields with a where-to-look instruction (“lot code beneath the best-by date on the lid; the recall covers 1274425 through 2140425”). You type what is printed. The agent posts an assessment with its reasoning. You click Keep, Discard, Return, or Contact firm. That decision is readable to the agent so the conversation can continue.
 
-## Why WebMCP
+## Why this use case is a strong fit for WebMCP
 
-WebMCP turns the page's real client-side search, comparison, evidence, and staging logic into typed browser tools. Agent calls update the same interface the person sees. This avoids brittle DOM automation and avoids a duplicate backend state that the page cannot see. The agent gets a reliable capability contract; the person keeps context, history, and control.
+The work is genuinely split. What is on the shelf, what the package says, and what to do with it are facts only the person has. Querying three databases per item, parsing code-range prose, and comparing readings are chores only an agent will do. WebMCP puts both halves in one place: typed tools update the visible page, and human actions in the page become tool-readable state. Scraping a recall site or pasting lot codes into chat cannot give the agent a reliable contract or the person a visible audit trail.
 
-Together they can do something that was previously awkward: reason across many live records while continuously reconciling them with the exact physical object. Neither the database nor the model silently wins over reality.
+## How it creates a better user experience
 
-## Implementation
+The person never opens a recall database or reads a code range. Each card shows status, the notices with full code text, a highlighted “your agent asks you to read” block with a one-line form, the agent’s assessment, and decision buttons. Everything carries the query, sources, per-source status, and fetch time. Errors are shown as errors. The agent, in turn, cannot skip the physical step: match verdicts are rejected by the page until a reading exists.
 
-The static JavaScript app uses `document.modelContext.registerTool()` to register eight imperative tools with closed schemas, bounded output, cancellation, and `readOnlyHint` / `untrustedContentHint` annotations. `search_products` performs an explicit CORS request to Open Food Facts full-text search; `lookup_barcode` uses v3.6. Every response includes source and fetch time. A five-minute cache respects the upstream search limit, and errors never fall back to dummy data.
+## What people and agents can do together that was difficult or impossible before
 
-The required source registration is present verbatim:
+A multi-item, multi-database recall sweep that ends in verified decisions, in minutes. Before, this meant either never checking or checking one product after a news story, because no assistant could see the pantry or the lid and no person wanted to query openFDA. Now a person lists a shelf in plain words, an agent does the sweep and the reading of dense notices, the person does thirty seconds of reading per flagged item, and both see the same result.
+
+## How WebMCP is implemented
+
+Static JavaScript, imperative API. `src/webmcp.js` contains the required registration verbatim:
 
 ```js
 await document.modelContext.registerTool({
@@ -42,24 +46,16 @@ await document.modelContext.registerTool({
 }, { signal: controller.signal });
 ```
 
-The tool surface is `search_products`, `lookup_barcode`, `record_package_check`, `compare_products`, `stage_verified_choice`, `request_human_decision`, `get_workspace_snapshot`, and `get_approved_choice`. There is deliberately no approval, purchase, checkout, or medical-decision tool.
-
-## Better user experience
-
-The interface makes live status, upstream freshness, missing fields, recorded allergens, ingredient text, and package-check outcomes visible. Agent work appears immediately in the shared page rather than disappearing into chat. The person can challenge a result, supply a mismatch, or withhold approval without losing the agent's analysis.
-
-## Development process
-
-A recurring Luna subagent reviewed the concept, live API path, security boundary, implementation, and release evidence during development. It returned suggestions to the main development thread and drove the removal of every user-facing Luna surface. Luna is not a product feature.
+Ten tools with closed schemas, runtime validation, AbortSignal support, 1,500-character output budgets, and `readOnlyHint` / `untrustedContentHint` annotations: `search_products`, `lookup_barcode`, `add_shelf_item`, `search_recalls`, `sweep_shelf`, `get_recall_details`, `request_package_reading`, `record_package_reading`, `assess_item`, `get_shelf`. External notices and relayed readings are marked untrusted. There is deliberately no tool that resolves, removes, purchases, or contacts anyone; resolution requires a trusted click and human authorization in the reducer. Live sources are `api.fda.gov` food and drug enforcement endpoints (24-month window, NOT_FOUND treated as zero, rate limits surfaced) and `saferproducts.gov`, queried in parallel with per-source status. Barcode digits from Open Food Facts records are compared digits-only against notice text, since notices print UPCs with spaces.
 
 ## Testing
 
-The project includes deterministic unit and tool-contract tests, evaluation scenarios, a real Open Food Facts smoke probe with retries, a repository-compliance gate, and a Chromium journey that validates WebMCP registration, real network data, visible physical checks, trusted human approval, and approved readback.
+`npm run check` runs 38 unit and contract tests plus a nine-point eval and a repository gate. `npm run test:live` hits the real Open Food Facts, openFDA, and CPSC endpoints. `npm run test:browser` drives Chromium with WebMCP feature flags through the full loop: registration, sweep with barcode flag, assessment rejected before a reading, trusted reading, assessment posted, trusted Discard, decision readable via `get_shelf`.
 
 ## Challenges
 
-Open Food Facts v3 is current but does not yet support full-text search. We use the documented legacy full-text search endpoint only for explicit searches and use v3.6 for barcode lookup. We also had to design for community-data uncertainty and strict rate limits without hiding errors behind fixtures.
+openFDA returns HTTP 404 for zero matches, so “no recalls” had to be distinguished from “source down”. CPSC’s product-name search is a substring match, so sweep queries use brand names and let the agent refine with `search_recalls`. Recall notices are prose, so the app does not try to parse code ranges itself; it gives the agent the full text and forces a human reading before any verdict.
 
-## What's next
+## What’s next
 
-Potential extensions include camera-assisted barcode input, opt-in locale filtering, and contribution links for correcting Open Food Facts records. The human verification gate and read-only external API posture would remain.
+Camera barcode capture, a household allergen profile matched against undeclared-allergen recalls (the most common FDA reason), and USDA FSIS meat and poultry recalls once a CORS-enabled feed exists. The human reading gate and human-only resolution would stay.

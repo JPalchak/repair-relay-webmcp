@@ -35,5 +35,5 @@ createServer(async (request, response) => {
     response.end("Not found");
   }
 }).listen(port, "127.0.0.1", () => {
-  console.log(`Label Relay running at http://127.0.0.1:${port}`);
+  console.log(`Recall Relay running at http://127.0.0.1:${port}`);
 });

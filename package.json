@@ -1,9 +1,9 @@
 {
   "name": "repair-relay-webmcp",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
-  "description": "A live product-label verification workspace for people and browser agents, powered by WebMCP and Open Food Facts.",
+  "description": "Recall Relay: a WebMCP workspace where an agent sweeps live FDA and CPSC recall notices for what is on your shelf and you read the package.",
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "vite",

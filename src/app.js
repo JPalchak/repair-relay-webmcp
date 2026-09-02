@@ -1,116 +1,110 @@
-import { createPackageCheck, stageChoice as buildChoice } from "./engine.js";
+import { RESOLUTIONS, createReading, sweepQueryFor } from "./engine.js";
 import { createRenderer } from "./render.js";
 import { createStore } from "./store.js";
 import { createToolDefinitions } from "./tool-definitions.js";
 import { registerWebMCPTools } from "./webmcp.js";
 
 const store = createStore();
-let compared = [];
 
-function toast(message) {
+function toast(message, tone = "info") {
   const item = document.createElement("div");
-  item.className = "toast";
+  item.className = `toast toast-${tone}`;
   item.textContent = message;
   document.querySelector("#toast-region").append(item);
-  setTimeout(() => item.remove(), 3600);
+  setTimeout(() => item.remove(), 4200);
 }
 
-function openDecision(reason) {
-  const dialog = document.querySelector("#decision-dialog");
-  document.querySelector("#decision-reason").textContent = reason;
-  const choice = store.getState().stagedChoice;
-  document.querySelector("#decision-summary").textContent = choice
-    ? `${choice.name}; ${choice.requiredChecks.length} physical check(s) remain; no approval recorded.`
-    : "Nothing is staged.";
-  if (!dialog.open) dialog.showModal();
+function onReadingRequested(itemId) {
+  toast("Your agent needs you to read something off a package.", "ask");
+  requestAnimationFrame(() => document.querySelector(`[data-item-id="${itemId}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" }));
 }
 
-const tools = createToolDefinitions({ store, onDecisionRequested: openDecision });
+const tools = createToolDefinitions({ store, onReadingRequested });
 const findTool = (name) => tools.find((tool) => tool.name === name);
 
-function toggleCompare(productId) {
-  compared = compared.includes(productId) ? compared.filter((id) => id !== productId) : [...compared, productId].slice(-4);
-  if (compared.length < 2) {
-    store.dispatch({ type: "CLEAR_COMPARISON" });
-    toast("Choose one more live result to compare.");
-    return;
+async function invoke(name, input = {}) {
+  try {
+    return await findTool(name).execute(input, { actor: "human" });
+  } catch (error) {
+    toast(error instanceof Error ? error.message : String(error), "error");
+    return null;
   }
-  findTool("compare_products").execute({ productIds: compared }, { actor: "human" }).catch((error) => toast(error.message));
 }
 
-function stageChoice(productId) {
-  const choice = buildChoice(store.getState(), { productId, rationale: "Staged by the person from the current live result set; physical package checks remain authoritative." }, "human");
-  store.dispatch({ type: "STAGE_CHOICE", choice, actor: "human" });
-  document.querySelector("#check-product").value = productId;
-  document.querySelector("#choice-panel").scrollIntoView({ behavior: "smooth", block: "start" });
-  toast("Choice staged, not approved. Verify the physical barcode and ingredients.");
-}
+// Human-only actions. None of these are reachable through WebMCP or the debug surface.
+const actions = {
+  addFromCatalog: (productId) => invoke("add_shelf_item", { productId }),
+  checkItem: (item) => invoke("search_recalls", { query: sweepQueryFor(item), scope: item.kind, itemId: item.id }),
+  removeItem: (itemId) => store.dispatch({ type: "REMOVE_ITEM", itemId }),
+  recordReading(itemId, field, value) {
+    try {
+      const reading = createReading({ itemId, field, value }, "human");
+      store.dispatch({ type: "ADD_READING", itemId, reading });
+      toast("Reading recorded as read by you.");
+      return true;
+    } catch (error) {
+      toast(error.message, "error");
+      return false;
+    }
+  },
+  resolveItem(itemId, action, event) {
+    if (!event?.isTrusted) return toast("Decisions require a real click in the page.", "error");
+    if (!RESOLUTIONS.includes(action)) return toast("Unknown decision.", "error");
+    try {
+      store.dispatch({ type: "RESOLVE_ITEM", itemId, action, note: "", authorization: { actor: "human", confirmed: true } });
+      toast(`Decision recorded: ${action.replace("_", " ")}.`);
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  }
+};
 
-const renderer = createRenderer({ store, tools, actions: { toggleCompare, stageChoice } });
+const renderer = createRenderer({ store, tools, actions });
 await registerWebMCPTools(tools, renderer.renderStatus);
 
-async function invokeLive(name, input) {
-  try {
-    await findTool(name).execute(input, { actor: "human" });
-  } catch (error) {
-    toast(error instanceof Error ? error.message : String(error));
-  }
-}
+store.subscribe((state) => {
+  if (!state.highlightItemId) return;
+  requestAnimationFrame(() => document.querySelector(`[data-item-id="${state.highlightItemId}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+  setTimeout(() => store.dispatch({ type: "CLEAR_HIGHLIGHT" }), 2400);
+});
 
 document.querySelector("#search-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  compared = [];
-  invokeLive("search_products", { query: document.querySelector("#search-query").value });
+  invoke("search_products", { query: document.querySelector("#search-query").value });
 });
 
 document.querySelector("#barcode-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  compared = [];
-  invokeLive("lookup_barcode", { barcode: document.querySelector("#barcode-input").value });
+  invoke("lookup_barcode", { barcode: document.querySelector("#barcode-input").value });
 });
 
-document.querySelector("#check-form").addEventListener("submit", (event) => {
+document.querySelector("#manual-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  try {
-    const check = createPackageCheck({
-      productId: document.querySelector("#check-product").value,
-      checkType: document.querySelector("#check-type").value,
-      outcome: document.querySelector("#check-outcome").value,
-      note: document.querySelector("#check-note").value
-    }, "human");
-    if (!store.getState().search?.results.some((product) => product.id === check.productId)) throw new Error("Choose a product from the current live results.");
-    store.dispatch({ type: "ADD_CHECK", check, actor: "human" });
-    document.querySelector("#check-note").value = "";
-    toast("Physical package check recorded.");
-  } catch (error) {
-    toast(error instanceof Error ? error.message : String(error));
-  }
+  const description = document.querySelector("#manual-description").value;
+  const brand = document.querySelector("#manual-brand").value;
+  const kind = document.querySelector("#manual-kind").value;
+  const result = await invoke("add_shelf_item", { description, brand, kind });
+  if (result) { document.querySelector("#manual-description").value = ""; document.querySelector("#manual-brand").value = ""; }
 });
 
-document.querySelector("#approval-checkbox").addEventListener("change", (event) => {
-  const choice = store.getState().stagedChoice;
-  document.querySelector("#approve-button").disabled = !event.currentTarget.checked || !choice || choice.requiredChecks.length > 0 || choice.status === "human_approved";
+document.querySelector("#sample-shelf-button").addEventListener("click", async () => {
+  const samples = [
+    { description: "Creamy peanut butter", brand: "Jif", kind: "food", note: "Sample item — replace with what is actually in your pantry." },
+    { description: "Children's ibuprofen oral suspension", brand: "Children's Ibuprofen", kind: "drug", note: "Sample item — medicine cabinet." },
+    { description: "Smart electric space heater", brand: "Govee", kind: "consumer", note: "Sample item — bedroom." }
+  ];
+  for (const sample of samples) await invoke("add_shelf_item", sample);
+  toast("Sample shelf added. Ask your agent to sweep it, or press Sweep shelf.");
 });
 
-document.querySelector("#approve-button").addEventListener("click", (event) => {
-  if (!event.isTrusted) return toast("Approval requires a visible, trusted human click.");
-  try {
-    store.dispatch({ type: "APPROVE_CHOICE", authorization: { actor: "human", confirmed: true } });
-    toast("Human approval recorded. The approved choice is now agent-readable.");
-  } catch (error) {
-    toast(error instanceof Error ? error.message : String(error));
-  }
-});
-
-document.querySelector("#clear-comparison-button").addEventListener("click", () => { compared = []; store.dispatch({ type: "CLEAR_COMPARISON" }); });
-document.querySelector("#reset-button").addEventListener("click", () => { compared = []; store.dispatch({ type: "RESET" }); toast("Workspace reset."); });
-document.querySelector("#decision-dialog").addEventListener("close", () => store.dispatch({ type: "CLEAR_DECISION_REQUEST" }));
+document.querySelector("#sweep-button").addEventListener("click", () => invoke("sweep_shelf", {}));
+document.querySelector("#reset-button").addEventListener("click", () => { store.dispatch({ type: "RESET" }); toast("Workspace reset."); });
 document.querySelector("#copy-prompt-button").addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText(document.querySelector("#suggested-prompt").textContent); toast("WebMCP prompt copied."); }
-  catch { toast("Copy unavailable; select the prompt manually."); }
+  try { await navigator.clipboard.writeText(document.querySelector("#suggested-prompt").textContent); toast("Prompt copied."); }
+  catch { toast("Copy unavailable; select the prompt manually.", "error"); }
 });
 
-window.__labelRelay = Object.freeze({
+window.__recallRelay = Object.freeze({
   getState: () => structuredClone(store.getState()),
   toolNames: tools.map((tool) => tool.name),
   invokeTool: async (name, input = {}) => {
@@ -120,6 +114,3 @@ window.__labelRelay = Object.freeze({
   },
   reset: () => store.dispatch({ type: "RESET" })
 });
-
-// One deliberate startup request makes the public demo useful immediately; it is never a fixture.
-await invokeLive("search_products", { query: "oat cereal" });

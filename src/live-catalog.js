@@ -1,7 +1,7 @@
 const SEARCH_ENDPOINT = "https://world.openfoodfacts.org/cgi/search.pl";
 const PRODUCT_ENDPOINT = "https://world.openfoodfacts.org/api/v3.6/product";
 const SOURCE_HOME = "https://world.openfoodfacts.org";
-const APP_ID = "LabelRelay/2.0 (https://github.com/JPalchak/repair-relay-webmcp)";
+const APP_ID = "RecallRelay/3.0 (https://github.com/JPalchak/repair-relay-webmcp)";
 const FIELDS = [
   "code",
   "product_name",
