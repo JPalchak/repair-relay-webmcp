@@ -1,7 +1,7 @@
 import { lookupLiveBarcode, searchLiveProducts } from "../src/live-catalog.js";
 
 const probes = [
-  { mode: "US live text search", run: () => searchLiveProducts("Quaker Old Fashioned Oats") },
+  { mode: "US-filtered world live text search", run: () => searchLiveProducts("Quaker Old Fashioned Oats") },
   { mode: "worldwide v3.6 barcode lookup", run: () => lookupLiveBarcode("030000010402") }
 ];
 
