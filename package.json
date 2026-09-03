@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "A live product-label verification workspace for people and browser agents, powered by WebMCP and Open Food Facts.",
+  "description": "A live WebMCP workspace where browser agents organize Open Food Facts records and people confirm or disprove the exact package before dietary screening.",
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "vite",
