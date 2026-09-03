@@ -1,0 +1,37 @@
+name: Public Origin WebMCP Smoke
+
+on:
+  push:
+    branches:
+      - test/public-origin-20260903
+    paths:
+      - "scripts/public-origin-smoke.mjs"
+      - ".github/workflows/public-origin-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-origin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts
+      - run: npm install --no-save playwright
+      - run: npx playwright install --with-deps chromium
+      - name: Test current public URL with native WebMCP and live data
+        run: node scripts/public-origin-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-origin-smoke-${{ github.run_number }}
+          path: |
+            reports/public-origin-smoke.json
+            reports/public-origin-smoke.png
+          if-no-files-found: warn
+          retention-days: 7
