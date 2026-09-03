@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Label Relay pairs live Open Food Facts records with human verification of the physical package through WebMCP.">
-  <meta name="theme-color" content="#171713">
-  <meta property="og:title" content="Label Relay — Live Product Truth, Human Verified">
-  <meta property="og:description" content="Agents search the live catalog. People verify the package. Neither works alone.">
+  <meta name="description" content="Label Relay helps allergy-aware households and caregivers pair live Open Food Facts records with human-confirmed package attestations through WebMCP.">
+  <meta name="theme-color" content="#f4f0e7">
+  <meta property="og:title" content="Label Relay — The agent finds the record. You confirm the package.">
+  <meta property="og:description" content="A shared WebMCP workspace for source-backed food-label screening with a visible human confirmation boundary.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="assets/social-card.svg">
-  <title>Label Relay — Live Product Truth, Human Verified</title>
+  <title>Label Relay — Human-confirmed package records</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
@@ -17,105 +17,187 @@
 <body>
   <a class="skip-link" href="#workspace">Skip to workspace</a>
   <header class="site-header">
-    <a class="brand" href="#" aria-label="Label Relay home"><img src="assets/icon.svg" alt="" width="38" height="38"><span>LABEL RELAY</span></a>
-    <div class="header-actions"><span id="webmcp-status" class="status-pill status-neutral">Detecting WebMCP</span><button id="reset-button" class="button button-quiet" type="button">Reset</button></div>
+    <a class="brand" href="#" aria-label="Label Relay home">
+      <img src="assets/icon.svg" alt="" width="38" height="38">
+      <span><strong>Label Relay</strong><small>Human-confirmed product records</small></span>
+    </a>
+    <div class="header-actions">
+      <span id="webmcp-status" class="status-pill status-neutral">Detecting WebMCP</span>
+      <button id="reset-button" class="button button-quiet" type="button">Reset workspace</button>
+    </div>
   </header>
 
   <main id="workspace">
-    <section class="hero">
-      <div>
-        <p class="eyebrow">Live catalog × physical reality</p>
-        <h1>The database knows millions.<br><em>You know this package.</em></h1>
-        <p class="hero-copy">Label Relay lets an agent search and compare current Open Food Facts records while you verify what only a person holding the package can know. Every recommendation stays provisional until the physical barcode and ingredients agree.</p>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy-wrap">
+        <p class="eyebrow">For allergy-aware households and caregivers</p>
+        <h1 id="hero-title">The agent finds the record.<br><em>You confirm the package.</em></h1>
+        <p class="hero-copy">Open Food Facts can be incomplete or stale. Label Relay lets a browser agent search and organize live records while the person holding the package confirms—or disproves—what the database says. The app records an attestation, not proof that the package was actually inspected.</p>
       </div>
-      <aside class="agent-card" aria-label="Suggested WebMCP prompt">
-        <div class="agent-card-head"><span class="pulse" aria-hidden="true"></span><strong>TRY WITH A WEBMCP AGENT</strong></div>
-        <p id="suggested-prompt">Search the live catalog for oat cereal, compare the most complete records, then stage one choice and tell me exactly what to verify on the package.</p>
-        <button id="copy-prompt-button" class="button button-accent" type="button">Copy prompt</button>
+      <aside class="demo-card" aria-label="Recommended WebMCP judge prompt">
+        <p class="section-kicker">Judge demo · about 90 seconds</p>
+        <p id="suggested-prompt">Look up barcode 030000010402, stage the record, and relay that I said the barcode and “Whole Grain Rolled Oats” ingredients match my package. Ask me to confirm each relayed statement before treating it as verified.</p>
+        <button id="copy-prompt-button" class="button button-primary" type="button">Copy judge prompt</button>
       </aside>
     </section>
 
-    <section class="proof-strip" aria-label="Collaboration sequence">
-      <div><b>01</b><span><strong>Agent searches live</strong><small>Current external records</small></span></div>
-      <div><b>02</b><span><strong>Person checks package</strong><small>Barcode + ingredients</small></span></div>
-      <div><b>03</b><span><strong>Shared state updates</strong><small>Visible to both</small></span></div>
-      <div><b>04</b><span><strong>Person decides</strong><small>Human-only approval</small></span></div>
+    <section class="proof-strip" aria-label="Human and agent collaboration">
+      <div><b>1</b><span><strong>Agent searches live records</strong><small>Fast catalog work and provenance</small></span></div>
+      <div><b>2</b><span><strong>Person confirms an attestation</strong><small>One trusted click for what they said</small></span></div>
+      <div><b>3</b><span><strong>Match unlocks a useful summary</strong><small>Mismatch blocks the record and opens correction</small></span></div>
     </section>
 
     <section class="search-deck" aria-labelledby="search-heading">
       <div class="search-intro">
-        <p class="section-kicker">Open Food Facts · live production API</p>
-        <h2 id="search-heading">Search what is actually out there</h2>
-        <p id="source-line">Every result will show its source and fetch time. No fixture fallback exists.</p>
+        <p class="section-kicker">Open Food Facts · live production data</p>
+        <h2 id="search-heading">Find the package record</h2>
+        <p id="source-line">Every result shows its source and fetch time. No fixture fallback exists.</p>
       </div>
       <form id="search-form" class="search-form">
-        <label for="search-query">Product, brand, or food phrase</label>
-        <div><input id="search-query" name="query" value="oat cereal" minlength="2" maxlength="80" required><button class="button button-primary" type="submit">Search live data</button></div>
+        <label for="search-query">Search products reported as sold in the United States</label>
+        <div>
+          <input id="search-query" name="query" value="Quaker Old Fashioned Oats" minlength="2" maxlength="80" autocomplete="off" required>
+          <button class="button button-primary" type="submit">Search live data</button>
+        </div>
       </form>
-      <div class="or-divider">or</div>
+      <div class="or-divider" aria-hidden="true">or</div>
       <form id="barcode-form" class="barcode-form">
-        <label for="barcode-input">Barcode on the package</label>
-        <div><input id="barcode-input" name="barcode" inputmode="numeric" placeholder="e.g. 3168930003632" minlength="8" maxlength="20" required><button class="button button-quiet" type="submit">Look up</button></div>
+        <label for="barcode-input">Worldwide barcode lookup</label>
+        <div>
+          <input id="barcode-input" name="barcode" inputmode="numeric" placeholder="030000010402" minlength="8" maxlength="20" autocomplete="off" required>
+          <button class="button button-primary" type="submit">Look up barcode</button>
+        </div>
+        <button id="sample-barcode-button" class="text-button sample-action" type="button">Use judge-demo barcode 030000010402</button>
       </form>
       <span id="search-status" class="status-pill status-neutral">No search yet</span>
     </section>
-    <p id="search-error" class="error-banner" role="alert" hidden></p>
+
+    <div id="search-error" class="error-banner" role="alert" hidden>
+      <span id="search-error-text"></span>
+      <button id="retry-search-button" class="button button-error" type="button" hidden>Retry the last live request</button>
+    </div>
 
     <div class="workspace-grid">
       <section class="panel results-panel" aria-labelledby="results-heading">
-        <div class="panel-heading"><div><p class="section-kicker">Agent-scale view</p><h2 id="results-heading">Live records</h2></div><span class="source-badge">OPEN DATA</span></div>
-        <div id="result-empty" class="empty-state"><strong>No live records yet</strong><p>Run a search above. If the external service is unavailable, Label Relay shows the error and never substitutes dummy data.</p></div>
+        <div class="panel-heading">
+          <div><p class="section-kicker">Agent-scale catalog view</p><h2 id="results-heading">Live records</h2></div>
+          <span class="source-badge">Open data</span>
+        </div>
+        <div id="result-empty" class="empty-state">
+          <strong>No live records yet</strong>
+          <p>Use the barcode demo or run a search above. If Open Food Facts is unavailable, the failure stays visible and retryable.</p>
+        </div>
         <ol id="product-list" class="product-list" aria-live="polite"></ol>
         <section id="comparison-panel" class="comparison-panel" hidden>
-          <div class="subheading"><h3>Side-by-side evidence</h3><button id="clear-comparison-button" class="text-button" type="button">Clear</button></div>
+          <div class="subheading"><h3>Side-by-side record quality</h3><button id="clear-comparison-button" class="text-button" type="button">Clear comparison</button></div>
           <div id="comparison-wrap" class="table-wrap"></div>
         </section>
       </section>
 
       <aside class="rail">
         <section class="panel human-panel" aria-labelledby="human-heading">
-          <div class="panel-heading"><div><p class="section-kicker">Human-only evidence</p><h2 id="human-heading">Check the package</h2></div><span id="check-count" class="count-badge">0</span></div>
-          <p class="panel-copy">The database can be stale or incomplete. Record what the physical label says; agent-supplied text is treated as untrusted evidence.</p>
+          <div class="panel-heading">
+            <div><p class="section-kicker">Human attestation</p><h2 id="human-heading">What does your package say?</h2></div>
+            <span id="check-count" class="count-badge">0</span>
+          </div>
+          <p class="panel-copy">A browser agent can relay what you say, but the statement remains pending human confirmation until you confirm it here. Label Relay cannot see the package or prove that you looked at it.</p>
           <form id="check-form" class="check-form">
-            <label>Live result<select id="check-product" required><option value="">Choose a live result…</option></select></label>
+            <label>Live result
+              <select id="check-product" required><option value="">Choose a live result…</option></select>
+            </label>
             <div class="form-row">
-              <label>Check<select id="check-type"><option value="barcode_match">Barcode match</option><option value="ingredients_match">Ingredients match</option><option value="allergens_match">Allergens match</option><option value="package_date">Package date</option><option value="available_here">Available here</option></select></label>
-              <label>Outcome<select id="check-outcome"><option value="match">Match</option><option value="mismatch">Mismatch</option><option value="unclear">Unclear</option></select></label>
+              <label>Check
+                <select id="check-type">
+                  <option value="barcode_match">Barcode match</option>
+                  <option value="ingredients_match">Ingredients match</option>
+                  <option value="allergens_match">Allergens match</option>
+                  <option value="package_date">Package date</option>
+                  <option value="available_here">Available here</option>
+                </select>
+              </label>
+              <label>Outcome
+                <select id="check-outcome">
+                  <option value="match">Match</option>
+                  <option value="mismatch">Mismatch</option>
+                  <option value="unclear">Unclear</option>
+                </select>
+              </label>
             </div>
-            <label>What you observed<textarea id="check-note" rows="2" maxlength="240" placeholder="The printed barcode and first ingredients match." required></textarea></label>
-            <button class="button button-primary" type="submit">Record physical check</button>
+            <label>What you attest that you read
+              <textarea id="check-note" rows="3" maxlength="240" placeholder="The printed barcode matches, and the ingredients begin “Whole Grain Rolled Oats.”" required></textarea>
+            </label>
+            <button class="button button-primary" type="submit">Record my attestation</button>
           </form>
           <ol id="check-list" class="check-list" aria-live="polite"></ol>
         </section>
 
         <section id="choice-panel" class="panel choice-panel" aria-labelledby="choice-heading">
-          <div class="panel-heading"><div><p class="section-kicker">Decision boundary</p><h2 id="choice-heading">Staged choice</h2></div><span id="choice-status" class="status-pill status-neutral">Nothing staged</span></div>
-          <div id="choice-empty" class="empty-state compact"><strong>Stage a live result</strong><p>An agent may propose. It cannot approve.</p></div>
+          <div class="panel-heading">
+            <div><p class="section-kicker">Decision boundary</p><h2 id="choice-heading">Staged package record</h2></div>
+            <span id="choice-status" class="status-pill status-neutral">Nothing staged</span>
+          </div>
+          <div id="choice-empty" class="empty-state compact">
+            <strong>Stage a live result</strong>
+            <p>An agent may propose a record. A person must confirm relayed statements and approve the final match.</p>
+          </div>
           <article id="choice-card" hidden>
-            <h3 id="choice-title"></h3><p id="choice-brand" class="product-brand"></p><p id="choice-rationale"></p>
+            <h3 id="choice-title"></h3>
+            <p id="choice-brand" class="product-brand"></p>
+            <p id="choice-rationale"></p>
             <ul id="required-checks" class="required-checks"></ul>
+            <div id="choice-verdict" class="mismatch-verdict" role="status" hidden></div>
+            <a id="correction-link" class="correction-link" href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer" hidden>Report or correct this Open Food Facts record ↗</a>
             <div class="approval-gate">
-              <label class="consent"><input id="approval-checkbox" type="checkbox"><span>I compared this record with the physical package and accept the remaining uncertainty.</span></label>
-              <button id="approve-button" class="button button-approve" type="button" disabled>Approve this verified choice</button>
-              <p id="approval-note">No WebMCP tool can approve.</p>
+              <label class="consent"><input id="approval-checkbox" type="checkbox"><span>I attest that I compared this record with the package in hand and accept the remaining uncertainty.</span></label>
+              <button id="approve-button" class="button button-approve" type="button" disabled>Approve this attested match</button>
+              <p id="approval-note">No WebMCP tool can confirm an attestation or approve for you.</p>
             </div>
+            <section id="verified-outcome" class="verified-outcome" aria-labelledby="verified-heading" hidden>
+              <p class="section-kicker">Approval consequence</p>
+              <h3 id="verified-heading">Verified label summary unlocked</h3>
+              <p>The person and agent can now continue an ingredient, allergen, or dietary-screening conversation using the same source-backed record and confirmed attestations.</p>
+              <div id="verified-summary"></div>
+              <div class="verified-actions">
+                <button id="copy-verified-summary-button" class="button button-primary" type="button" disabled>Copy verified summary</button>
+                <a id="verified-source-link" class="button button-quiet" href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer">Open source record</a>
+              </div>
+            </section>
           </article>
         </section>
       </aside>
     </div>
 
     <section class="inspect-grid">
-      <div class="panel activity-panel"><div class="panel-heading"><div><p class="section-kicker">Shared state</p><h2>Relay log</h2></div><span class="source-badge">VISIBLE</span></div><ol id="activity-log" class="activity-log"></ol></div>
-      <div class="panel tools-panel"><div><p class="section-kicker">Native WebMCP</p><h2>Eight narrow tools</h2><p>Calls update the same interface the person sees. Live external content is marked untrusted; approval is absent by design.</p></div><div id="tool-list" class="tool-list"></div></div>
+      <div class="panel activity-panel">
+        <div class="panel-heading"><div><p class="section-kicker">Shared state</p><h2>Relay history</h2></div><span class="source-badge">Visible to both</span></div>
+        <ol id="activity-log" class="activity-log"></ol>
+      </div>
+      <div class="panel tools-panel">
+        <div>
+          <p class="section-kicker">Native WebMCP</p>
+          <h2>Eight focused tools</h2>
+          <p>Tool calls update the same page the person sees. External records and agent-relayed statements remain untrusted until the appropriate human action occurs.</p>
+        </div>
+        <div id="tool-list" class="tool-list"></div>
+      </div>
     </section>
 
     <footer>
-      <p>Data: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer">Open Food Facts</a> under ODbL. Product images are available under CC BY-SA; packaging may include third-party rights. Records are community-contributed and may be inaccurate or incomplete—always verify the physical label.</p>
+      <p>Data: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer">Open Food Facts</a> under ODbL. Records are community-contributed and may be inaccurate or incomplete. The current package label remains authoritative.</p>
       <p><a href="https://github.com/JPalchak/repair-relay-webmcp" target="_blank" rel="noopener noreferrer">Source code</a> · MIT licensed · No purchases, medical decisions, or background tracking</p>
     </footer>
   </main>
 
-  <dialog id="decision-dialog" class="decision-dialog"><form method="dialog"><button class="dialog-close" value="cancel" aria-label="Close">×</button><p class="section-kicker">Human checkpoint</p><h2>Reality check required</h2><p id="decision-reason"></p><div id="decision-summary" class="dialog-summary"></div><button class="button button-primary" value="review">Review in the workspace</button></form></dialog>
+  <dialog id="decision-dialog" class="decision-dialog">
+    <form method="dialog">
+      <button class="dialog-close" value="cancel" aria-label="Close">×</button>
+      <p class="section-kicker">Human checkpoint</p>
+      <h2>Package judgment required</h2>
+      <p id="decision-reason"></p>
+      <div id="decision-summary" class="dialog-summary"></div>
+      <button class="button button-primary" value="review">Review in the workspace</button>
+    </form>
+  </dialog>
   <div id="toast-region" class="toast-region" aria-live="polite"></div>
   <noscript><div class="error-banner">Label Relay requires JavaScript for live data and WebMCP.</div></noscript>
   <script type="module" src="src/app.js"></script>

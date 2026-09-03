@@ -1,0 +1,45 @@
+{
+  "ordinary": {
+    "ok": true,
+    "mode": "ordinary-browser-production-client-with-deterministic-upstream-response",
+    "confirmedRelayedStatements": 2,
+    "approvalUnlockedSummary": true,
+    "laterMismatchRevokedApproval": true,
+    "correctionUrlVisible": true,
+    "mobileHorizontalOverflowPixels": 0,
+    "consoleErrors": []
+  },
+  "native": {
+    "ok": true,
+    "browserVersion": "144.0.7559.96",
+    "nativeApiSurface": {
+      "documentModelContext": false,
+      "documentTesting": false,
+      "navigatorModelContext": true,
+      "navigatorTesting": true
+    },
+    "registeredToolCount": 8,
+    "registeredTools": [
+      "get_workspace_snapshot",
+      "search_products",
+      "record_package_check",
+      "lookup_barcode",
+      "get_approved_choice",
+      "request_human_decision",
+      "compare_products",
+      "stage_verified_choice"
+    ],
+    "nativeInvocations": [
+      "lookup_barcode",
+      "stage_verified_choice",
+      "record_package_check",
+      "record_package_check",
+      "get_approved_choice"
+    ],
+    "trustedVisibleConfirmations": 2,
+    "trustedVisibleApproval": true,
+    "fixtureUpstream": true,
+    "claimBoundary": "Native browser WebMCP registration and execution were verified with the production client and deterministic API-shaped Open Food Facts responses. This is not proof that the public deployment can currently reach the upstream service.",
+    "consoleErrors": []
+  }
+}

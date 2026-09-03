@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Label Relay mark">
-  <rect width="128" height="128" rx="28" fill="#171713"/>
-  <path d="M26 33h76v62H26z" fill="#fffef8" stroke="#d7ff43" stroke-width="7"/>
-  <path d="M41 48v31m10-31v31m16-31v31m8-31v31m12-31v31" stroke="#171713" stroke-width="5"/>
-  <circle cx="100" cy="96" r="15" fill="#2058f5"/>
-  <path d="m93 96 5 5 9-11" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Label Relay</title>
+  <rect width="64" height="64" rx="16" fill="#f4f0e7"/>
+  <path d="M18 20h21l8 8v20H18z" fill="#fffdf8" stroke="#2f2922" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M39 20v9h8" fill="none" stroke="#2f2922" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M24 35h16M24 41h12" stroke="#9b4d34" stroke-width="3" stroke-linecap="round"/>
 </svg>
