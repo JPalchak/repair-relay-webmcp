@@ -4,7 +4,7 @@
 
 - **Live application:** https://repair-relay-webmcp.ottermode.chatgpt.site
 - **Public repository:** https://github.com/JPalchak/repair-relay-webmcp
-- **Demo video:** not yet published; a public YouTube URL remains a manual submission blocker.
+- **Demo video:** not yet published; an upload-ready 2:14 MP4 has been generated, but its public YouTube URL remains a manual submission blocker.
 - **License:** MIT for the application. Open Food Facts data is ODbL; product images are CC BY-SA and packaging may carry other rights.
 
 ## Judge this in 90 seconds
@@ -44,7 +44,7 @@ With WebMCP:
 
 `src/live-catalog.js` makes production requests to Open Food Facts:
 
-- US-scoped text search uses `https://us.openfoodfacts.org/cgi/search.pl` so the default judge path favors products reported as sold in the United States.
+- US-scoped text search uses the worldwide search endpoint with the canonical `en:united-states` country filter. This preserves U.S. relevance without depending on the less reliable U.S. subdomain.
 - Worldwide barcode lookup uses the current v3.6 product endpoint.
 - English ingredient text is requested and preferred when available.
 - Open Food Facts’ product completeness value is used when present; a clearly bounded field-availability fallback is used only when the upstream field is absent.
@@ -52,7 +52,7 @@ With WebMCP:
 - HTTP 429/503, timeouts, non-JSON 200 responses, and no-result states remain distinct and visible.
 - There is no fixture or static-product fallback in the deployed application path.
 
-`npm run test:live` now requires **both** the US text-search probe and the worldwide barcode probe to pass after bounded retries. A single surviving endpoint no longer makes the live-data job green.
+`npm run test:live` requires **both** the U.S.-filtered text-search probe and the worldwide barcode probe to pass after bounded retries. A single surviving endpoint cannot make the live-data job green.
 
 ## Human attestation and mismatch handling
 
@@ -107,7 +107,7 @@ The current `document.modelContext` API is preferred. A `navigator.modelContext`
 
 | Tool | Visible/shared effect |
 |---|---|
-| `search_products` | Searches US-scoped live records and replaces the visible result board |
+| `search_products` | Searches U.S.-filtered live records and replaces the visible result board |
 | `lookup_barcode` | Fetches a worldwide v3.6 barcode record |
 | `record_package_check` | Adds an agent-relayed statement as pending human confirmation |
 | `compare_products` | Shows source completeness, freshness, allergens, and nutrition side by side |
@@ -140,7 +140,9 @@ npm run build
 
 The deterministic browser test intentionally uses API-shaped responses and a registration capture layer so edge cases are repeatable. It is not presented as native browser evidence.
 
-A separate native run was completed against Chromium 144’s actual preview `navigator.modelContext`/`navigator.modelContextTesting` surface using the production client and deterministic upstream responses. It registered all eight tools and executed the pending-attestation-to-approved-summary path. That proves native browser protocol behavior in the available preview build, but it does **not** prove current Chrome 149+ or the public deployment. See `TESTED_AGENTS.md` and `docs/browser-test.md` for the exact claim boundary and the remaining public-origin test.
+On September 3, 2026, the production application was also run in Chrome `151.0.7922.173` using actual Open Food Facts network data and the current native `document.modelContext` surface. All eight tools registered; the browser executed the pending-attestation flow; two trusted visible confirmations unlocked approval; a later mismatch revoked that approval; and the run produced zero browser errors. Machine-readable evidence is committed at `docs/evidence/demo-capture-report.json`.
+
+That test used the exact repository application on a local static server. It proves the current native protocol and the live data path together, but does not prove that the separate public ChatGPT Sites deployment has been refreshed to the same commit or that ChatGPT’s in-app browser has invoked it.
 
 ## Security and privacy
 
