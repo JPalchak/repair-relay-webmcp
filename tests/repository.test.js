@@ -11,9 +11,10 @@ test("imperative WebMCP registration contains the exact required literal", async
   assert.match(source, /description:\s*["']Search the product catalog["']/);
 });
 
-test("live catalog uses US search, worldwide barcode data, English ingredients, and upstream completeness", async () => {
+test("live catalog uses US-filtered world search, worldwide barcode data, English ingredients, and upstream completeness", async () => {
   const source = await read("src/live-catalog.js");
-  assert.match(source, /us\.openfoodfacts\.org\/cgi\/search\.pl/);
+  assert.match(source, /world\.openfoodfacts\.org\/cgi\/search\.pl/);
+  assert.match(source, /tag_0:\s*"en:united-states"/);
   assert.match(source, /world\.openfoodfacts\.org\/api\/v3\.6\/product/);
   assert.match(source, /ingredients_text_en/);
   assert.match(source, /product\?\.completeness/);
