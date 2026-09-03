@@ -1,0 +1,90 @@
+name: Build Label Relay Demo Video
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/capture-demo.mjs"
+      - ".github/workflows/demo-video.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Install project and browser tooling
+        run: |
+          npm install --ignore-scripts
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
+      - name: Capture live-data product workflow
+        run: node scripts/capture-demo.mjs
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate narration
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check edge-tts
+          edge-tts \
+            --voice en-US-AndrewNeural \
+            --rate=-4% \
+            --file reports/demo-narration.txt \
+            --write-media reports/demo-narration.mp3 \
+            --write-subtitles reports/demo-narration.srt
+
+      - name: Produce upload-ready MP4
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          ffmpeg -y \
+            -i reports/label-relay-demo-raw.webm \
+            -i reports/demo-narration.mp3 \
+            -filter_complex "[0:v]tpad=stop_mode=clone:stop_duration=90,subtitles=reports/demo-narration.srt:force_style='FontName=DejaVu Sans,FontSize=20,PrimaryColour=&H00FFFFFF,BackColour=&H99000000,BorderStyle=3,Outline=1,Shadow=0,MarginV=26'[v]" \
+            -map "[v]" -map 1:a:0 \
+            -c:v libx264 -preset medium -crf 21 -pix_fmt yuv420p \
+            -c:a aac -b:a 160k -shortest -movflags +faststart \
+            reports/label-relay-demo-upload.mp4
+          duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 reports/label-relay-demo-upload.mp4)"
+          python - "$duration" <<'PY'
+          import sys
+          duration = float(sys.argv[1])
+          if duration >= 180:
+              raise SystemExit(f"Demo must remain under three minutes; produced {duration:.2f}s")
+          print(f"Upload-ready demo duration: {duration:.2f}s")
+          PY
+
+      - name: Upload demo package
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: label-relay-youtube-demo-${{ github.run_number }}
+          path: |
+            reports/label-relay-demo-upload.mp4
+            reports/label-relay-demo-raw.webm
+            reports/demo-narration.txt
+            reports/demo-narration.mp3
+            reports/demo-narration.srt
+            reports/demo-capture-report.json
+            reports/demo-live-first-frame.png
+            reports/demo-capture-failure.txt
+          if-no-files-found: warn
+          retention-days: 14
