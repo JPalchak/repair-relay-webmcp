@@ -1,0 +1,36 @@
+{
+  "capturedAt": "2026-09-03T15:47:03.872Z",
+  "browserVersion": "151.0.7922.173",
+  "liveData": {
+    "source": "Open Food Facts",
+    "sourceUrl": "https://world.openfoodfacts.org/product/0030000010402",
+    "fetchedAt": "2026-09-03T15:45:25.824Z",
+    "searchScope": "Worldwide barcode record",
+    "product": {
+      "id": "0030000010402",
+      "name": "Old Fashioned Oats",
+      "brand": "Quaker Oats",
+      "sourceUrl": "https://world.openfoodfacts.org/product/0030000010402",
+      "lastModified": "2026-08-10T16:11:39.000Z",
+      "completeness": 79
+    }
+  },
+  "nativeSurface": {
+    "documentModelContext": true,
+    "documentTesting": true,
+    "navigatorModelContext": true,
+    "navigatorTesting": true
+  },
+  "toolTransport": "document.modelContext",
+  "relayTransports": [
+    "document.modelContext",
+    "document.modelContext"
+  ],
+  "approvedTransport": "document.modelContext",
+  "trustedHumanConfirmations": 2,
+  "trustedHumanApproval": true,
+  "mismatchRevokedApproval": true,
+  "correctionUrl": "https://world.openfoodfacts.org/cgi/product.pl?type=edit&code=0030000010402",
+  "browserErrors": [],
+  "claimBoundary": "The screen capture uses the production application and actual Open Food Facts network data on a local static server. It verifies the current document.modelContext protocol in Chrome 151, but it is not evidence that the separate public ChatGPT Sites deployment has been refreshed to this commit."
+}
