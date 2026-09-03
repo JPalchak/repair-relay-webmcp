@@ -1,4 +1,4 @@
-const SEARCH_ENDPOINT = "https://us.openfoodfacts.org/cgi/search.pl";
+const SEARCH_ENDPOINT = "https://world.openfoodfacts.org/cgi/search.pl";
 const PRODUCT_ENDPOINT = "https://world.openfoodfacts.org/api/v3.6/product";
 const SOURCE_HOME = "https://world.openfoodfacts.org";
 const APP_ID = "LabelRelay/2.1 (https://github.com/JPalchak/repair-relay-webmcp)";
@@ -159,7 +159,10 @@ export async function searchLiveProducts(query, options = {}) {
     action: "process",
     json: "1",
     page_size: "10",
-    fields: FIELDS
+    fields: FIELDS,
+    tagtype_0: "countries",
+    tag_contains_0: "contains",
+    tag_0: "en:united-states"
   }).toString();
   const data = await requestJson(url, options);
   const products = sortResults(Array.isArray(data?.products) ? data.products.map(normalizeProduct).filter(Boolean) : []);
@@ -169,7 +172,7 @@ export async function searchLiveProducts(query, options = {}) {
     results: products,
     fetchedAt: new Date().toISOString(),
     source: "Open Food Facts",
-    sourceUrl: "https://us.openfoodfacts.org",
+    sourceUrl: SOURCE_HOME,
     searchScope: "Products reported as sold in the United States",
     live: true
   };
