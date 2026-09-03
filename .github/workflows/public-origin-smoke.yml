@@ -24,7 +24,9 @@ jobs:
       - run: npm install --ignore-scripts
       - run: npm install --no-save playwright
       - run: npx playwright install --with-deps chromium
-      - name: Test current public URL with native WebMCP and live data
+      - name: Test exact-commit public HTTPS build with native WebMCP and live data
+        env:
+          PUBLIC_URL: https://rawcdn.githack.com/JPalchak/repair-relay-webmcp/66b0508cfc3974a42c0fe559ad05212ab184d28d/index.html
         run: node scripts/public-origin-smoke.mjs
       - uses: actions/upload-artifact@v4
         if: always()
