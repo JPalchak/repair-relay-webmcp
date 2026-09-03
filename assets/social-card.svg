@@ -1,13 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <rect width="1200" height="630" fill="#f3f1e8"/>
-  <path d="M0 0h1200v18H0z" fill="#2058f5"/>
-  <rect x="62" y="62" width="1076" height="506" rx="32" fill="#171713"/>
-  <text x="112" y="145" fill="#d7ff43" font-size="27" font-family="monospace" letter-spacing="3">LIVE CATALOG × PHYSICAL REALITY</text>
-  <text x="112" y="270" fill="#fffef8" font-size="84" font-weight="700" font-family="Arial, sans-serif">Label Relay</text>
-  <text x="112" y="355" fill="#fffef8" font-size="36" font-family="Arial, sans-serif">Agents search what the world knows.</text>
-  <text x="112" y="405" fill="#fffef8" font-size="36" font-family="Arial, sans-serif">People verify what is in their hands.</text>
-  <text x="112" y="500" fill="#aead9f" font-size="25" font-family="Arial, sans-serif">Open Food Facts · WebMCP · human-only approval</text>
-  <rect x="895" y="120" width="176" height="235" fill="#fffef8" stroke="#d7ff43" stroke-width="12"/>
-  <path d="M930 160v150m24-150v150m38-150v150m20-150v150" stroke="#171713" stroke-width="12"/>
-  <circle cx="1035" cy="410" r="62" fill="#2058f5"/><path d="m1007 410 20 21 38-47" fill="none" stroke="white" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Label Relay</title>
+  <desc id="desc">The agent finds the record. You confirm the package.</desc>
+  <rect width="1200" height="630" fill="#f4f0e7"/>
+  <rect x="70" y="70" width="1060" height="490" rx="34" fill="#fffdf8" stroke="#d6cdbf" stroke-width="3"/>
+  <text x="130" y="170" font-family="Arial, sans-serif" font-size="28" font-weight="700" letter-spacing="3" fill="#9b4d34">LABEL RELAY</text>
+  <text x="130" y="285" font-family="Georgia, serif" font-size="68" font-weight="600" fill="#2f2922">The agent finds the record.</text>
+  <text x="130" y="375" font-family="Georgia, serif" font-size="68" font-style="italic" fill="#9b4d34">You confirm the package.</text>
+  <text x="130" y="460" font-family="Arial, sans-serif" font-size="28" fill="#6d655d">Live Open Food Facts × trusted human attestation × WebMCP</text>
 </svg>
