@@ -1,25 +1,32 @@
 {
   "name": "repair-relay-webmcp",
-  "version": "2.0.0",
+  "version": "4.0.0",
   "private": true,
   "type": "module",
-  "description": "A live WebMCP workspace where browser agents organize Open Food Facts records and people confirm or disprove the exact package before dietary screening.",
+  "description": "A persistent evidence-driven repair workspace shared by people and browser agents through WebMCP.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "dev": "vite",
-    "serve": "node scripts/serve.mjs",
-    "test": "node --test tests/*.test.js",
-    "eval": "node scripts/evals.mjs",
-    "test:live": "node scripts/live-data-smoke.mjs",
-    "check": "npm run test && npm run eval && npm run verify:repo",
+    "typecheck": "tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.worker.json --noEmit",
+    "dev": "node scripts/dev-server.mjs",
+    "test": "node scripts/build.mjs --quiet && node --test tests/*.test.mjs",
+    "test:browser": "python tests/browser_smoke.py",
+    "test:webmcp-native": "python tests/native_webmcp.py",
+    "eval": "node evals/run.mjs",
+    "eval:model": "node evals/model-selection.mjs",
     "verify:repo": "node scripts/verify-repository.mjs",
-    "test:browser": "node scripts/browser-smoke.mjs"
+    "audit": "npm audit --audit-level=high",
+    "check": "npm run typecheck && npm run test && npm run eval && npm run verify:repo",
+    "check:release": "npm run typecheck && npm run test && npm run eval && npm run eval:model && npm run test:browser && npm run test:webmcp-native && npm run build && npm run verify:repo && npm run audit",
+    "deploy": "npm run build && wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply repair-relay --local",
+    "db:migrate:remote": "wrangler d1 migrations apply repair-relay --remote"
   },
-  "engines": {
-    "node": ">=20"
-  },
-  "license": "MIT",
   "devDependencies": {
-    "vite": "^8.2.2"
+    "typescript": "5.8.3",
+    "wrangler": "4.128.0"
   }
 }
